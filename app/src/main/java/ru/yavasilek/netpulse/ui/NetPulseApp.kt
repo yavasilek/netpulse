@@ -44,10 +44,14 @@ private enum class MainDestination(
 fun NetPulseApp(
     state: NetPulseUiState,
     notificationPermissionGranted: Boolean,
+    batteryOptimizationIgnored: Boolean,
     openUpdateSettings: Boolean,
     onUpdateSettingsOpened: () -> Unit,
     onRequestNotificationPermission: () -> Unit,
     onRefreshPublicIp: () -> Unit,
+    onRefreshNetworkQuality: () -> Unit,
+    onShareDiagnosticReport: () -> Unit,
+    onShareEvents: () -> Unit,
     onMonitoringChange: (Boolean) -> Unit,
     onStartOnBootChange: (Boolean) -> Unit,
     onSpeedUnitChange: (SpeedUnit) -> Unit,
@@ -56,7 +60,10 @@ fun NetPulseApp(
     onIpWarningChange: (Boolean) -> Unit,
     onAutomaticUpdatesChange: (Boolean) -> Unit,
     onDynamicColorChange: (Boolean) -> Unit,
+    onLockScreenDetailsChange: (Boolean) -> Unit,
     onRequireVpnForProtectionChange: (Boolean) -> Unit,
+    onOpenBatterySettings: () -> Unit,
+    onOpenVpnSettings: () -> Unit,
     onTrustCurrentExit: () -> Unit,
     onClearTrustedExit: () -> Unit,
     onClearEvents: () -> Unit,
@@ -112,8 +119,10 @@ fun NetPulseApp(
         if (showSettings) {
             SettingsScreen(
                 settings = state.settings,
+                snapshot = state.monitor,
                 updateState = state.update,
                 notificationPermissionGranted = notificationPermissionGranted,
+                batteryOptimizationIgnored = batteryOptimizationIgnored,
                 onRequestNotificationPermission = onRequestNotificationPermission,
                 onMonitoringChange = onMonitoringChange,
                 onStartOnBootChange = onStartOnBootChange,
@@ -123,7 +132,10 @@ fun NetPulseApp(
                 onIpWarningChange = onIpWarningChange,
                 onAutomaticUpdatesChange = onAutomaticUpdatesChange,
                 onDynamicColorChange = onDynamicColorChange,
+                onLockScreenDetailsChange = onLockScreenDetailsChange,
                 onRequireVpnForProtectionChange = onRequireVpnForProtectionChange,
+                onOpenBatterySettings = onOpenBatterySettings,
+                onOpenVpnSettings = onOpenVpnSettings,
                 onCheckUpdates = onCheckUpdates,
                 onDownloadUpdate = onDownloadUpdate,
                 onInstallUpdate = onInstallUpdate,
@@ -134,6 +146,8 @@ fun NetPulseApp(
                 MainDestination.PULSE -> PulseScreen(
                     snapshot = state.monitor,
                     speedUnit = state.settings.speedUnit,
+                    onRefreshQuality = onRefreshNetworkQuality,
+                    onShareDiagnosticReport = onShareDiagnosticReport,
                     modifier = modifier,
                 )
                 MainDestination.GUARD -> GuardScreen(
@@ -147,6 +161,7 @@ fun NetPulseApp(
                 MainDestination.EVENTS -> EventsScreen(
                     events = state.events,
                     onClear = onClearEvents,
+                    onShare = onShareEvents,
                     modifier = modifier,
                 )
             }

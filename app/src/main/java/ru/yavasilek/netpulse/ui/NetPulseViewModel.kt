@@ -114,6 +114,16 @@ class NetPulseViewModel(
         }
     }
 
+    fun setShowNetworkDetailsOnLockScreen(enabled: Boolean) {
+        viewModelScope.launch {
+            container.settingsRepository.setShowNetworkDetailsOnLockScreen(enabled)
+        }
+    }
+
+    fun refreshNetworkQuality() {
+        container.monitorRepository.refreshNetworkQuality()
+    }
+
     fun setRequireVpnForProtection(enabled: Boolean) {
         viewModelScope.launch {
             container.settingsRepository.setRequireVpnForProtection(enabled)
@@ -147,6 +157,12 @@ class NetPulseViewModel(
     fun checkForUpdates() {
         viewModelScope.launch {
             container.updateManager.check()
+        }
+    }
+
+    fun checkForUpdatesIfStale() {
+        viewModelScope.launch {
+            container.updateManager.checkIfStale()
         }
     }
 

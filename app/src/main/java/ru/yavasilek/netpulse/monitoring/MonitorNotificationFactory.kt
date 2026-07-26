@@ -12,6 +12,7 @@ import ru.yavasilek.netpulse.MainActivity
 import ru.yavasilek.netpulse.R
 import ru.yavasilek.netpulse.model.ConnectionStatus
 import ru.yavasilek.netpulse.model.MonitorSnapshot
+import ru.yavasilek.netpulse.model.NetworkQualityStatus
 import ru.yavasilek.netpulse.protection.ProtectionEvaluator
 import ru.yavasilek.netpulse.protection.ProtectionStatus
 import ru.yavasilek.netpulse.settings.AppSettings
@@ -34,7 +35,7 @@ class MonitorNotificationFactory(
                     description =
                         context.getString(R.string.notification_channel_monitor_description)
                     setShowBadge(false)
-                    lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+                    lockscreenVisibility = Notification.VISIBILITY_PRIVATE
                 },
                 NotificationChannel(
                     ALERTS_CHANNEL_ID,
@@ -66,6 +67,7 @@ class MonitorNotificationFactory(
         val refreshingPublicIp = snapshot.publicIp.isRefreshing
         val summary = buildList {
             add(status)
+            add(snapshot.quality.notificationLabel())
             add(protection.status.notificationLabel())
             if (refreshingPublicIp) {
                 add("IP обновляется")
@@ -76,6 +78,9 @@ class MonitorNotificationFactory(
         val bigText = buildString {
             appendLine(summary)
             appendLine(snapshot.connection.transportLabel)
+            append("Качество: ")
+            append(snapshot.quality.detailLabel())
+            appendLine()
             append("IPv4: ")
             append(
                 if (refreshingPublicIp) {
@@ -95,7 +100,12 @@ class MonitorNotificationFactory(
             )
         }
 
-        return Notification.Builder(context, MONITOR_CHANNEL_ID)
+        val visibility = if (settings.showNetworkDetailsOnLockScreen) {
+            Notification.VISIBILITY_PUBLIC
+        } else {
+            Notification.VISIBILITY_PRIVATE
+        }
+        val builder = Notification.Builder(context, MONITOR_CHANNEL_ID)
             .setSmallIcon(iconRenderer.render(snapshot.speed, settings))
             .setContentTitle("↓ $download · ↑ $upload")
             .setContentText(summary)
@@ -105,12 +115,24 @@ class MonitorNotificationFactory(
             .setOngoing(true)
             .setShowWhen(false)
             .setCategory(Notification.CATEGORY_STATUS)
-            .setVisibility(Notification.VISIBILITY_PUBLIC)
+            .setVisibility(visibility)
             .setColor(ContextCompat.getColor(context, R.color.launcher_background))
             .addAction(action(ACTION_REFRESH, R.string.notification_action_refresh))
             .addAction(action(ACTION_COPY, R.string.notification_action_copy))
             .addAction(action(ACTION_STOP, R.string.notification_action_pause))
-            .build()
+        if (!settings.showNetworkDetailsOnLockScreen) {
+            builder.setPublicVersion(
+                Notification.Builder(context, MONITOR_CHANNEL_ID)
+                    .setSmallIcon(iconRenderer.render(snapshot.speed, settings))
+                    .setContentTitle("↓ $download · ↑ $upload")
+                    .setContentText("NetPulse работает")
+                    .setOngoing(true)
+                    .setShowWhen(false)
+                    .setCategory(Notification.CATEGORY_STATUS)
+                    .build(),
+            )
+        }
+        return builder.build()
     }
 
     fun buildAlert(title: String, message: String): Notification =
@@ -164,6 +186,26 @@ class MonitorNotificationFactory(
         ProtectionStatus.ATTENTION -> "Защита: проверка"
         ProtectionStatus.DANGER -> "Защита: риск"
     }
+
+    private fun ru.yavasilek.netpulse.model.NetworkQuality.notificationLabel(): String =
+        when (status) {
+            NetworkQualityStatus.CHECKING -> "Качество: проверка"
+            NetworkQualityStatus.EXCELLENT -> "${latencyMillis ?: "—"} мс"
+            NetworkQualityStatus.GOOD -> "${latencyMillis ?: "—"} мс"
+            NetworkQualityStatus.UNSTABLE -> "Связь нестабильна"
+            NetworkQualityStatus.UNAVAILABLE -> "Качество недоступно"
+        }
+
+    private fun ru.yavasilek.netpulse.model.NetworkQuality.detailLabel(): String =
+        when (status) {
+            NetworkQualityStatus.CHECKING -> "проверяется"
+            NetworkQualityStatus.UNAVAILABLE -> errorMessage ?: "недоступно"
+            else -> listOfNotNull(
+                latencyMillis?.let { "$it мс" },
+                jitterMillis?.let { "джиттер $it мс" },
+                packetLossPercent?.let { "потери $it%" },
+            ).joinToString(" · ")
+        }
 
     companion object {
         const val MONITOR_CHANNEL_ID = "network_monitor"

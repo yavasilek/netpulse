@@ -25,6 +25,8 @@ class SettingsRepository(
         val warnWhenIpChanges = booleanPreferencesKey("warn_when_ip_changes")
         val automaticUpdateChecks = booleanPreferencesKey("automatic_update_checks")
         val dynamicColor = booleanPreferencesKey("dynamic_color")
+        val showNetworkDetailsOnLockScreen =
+            booleanPreferencesKey("show_network_details_on_lock_screen")
         val requireVpnForProtection = booleanPreferencesKey("require_vpn_for_protection")
         val trustedExitCountryCode = stringPreferencesKey("trusted_exit_country_code")
         val trustedExitCountryName = stringPreferencesKey("trusted_exit_country_name")
@@ -53,6 +55,8 @@ class SettingsRepository(
                 warnWhenIpChanges = preferences[Keys.warnWhenIpChanges] ?: false,
                 automaticUpdateChecks = preferences[Keys.automaticUpdateChecks] ?: true,
                 dynamicColor = preferences[Keys.dynamicColor] ?: true,
+                showNetworkDetailsOnLockScreen =
+                    preferences[Keys.showNetworkDetailsOnLockScreen] ?: false,
                 requireVpnForProtection = preferences[Keys.requireVpnForProtection] ?: true,
                 trustedExitProfile = preferences[Keys.trustedExitCountryCode]?.let { countryCode ->
                     TrustedExitProfile(
@@ -84,6 +88,9 @@ class SettingsRepository(
         edit(Keys.automaticUpdateChecks, value)
 
     suspend fun setDynamicColor(value: Boolean) = edit(Keys.dynamicColor, value)
+
+    suspend fun setShowNetworkDetailsOnLockScreen(value: Boolean) =
+        edit(Keys.showNetworkDetailsOnLockScreen, value)
 
     suspend fun setRequireVpnForProtection(value: Boolean) =
         edit(Keys.requireVpnForProtection, value)

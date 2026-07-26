@@ -4,6 +4,7 @@ import android.content.Context
 import ru.yavasilek.netpulse.data.NetworkEventStore
 import ru.yavasilek.netpulse.monitoring.MonitorRepository
 import ru.yavasilek.netpulse.network.ConnectivityObserver
+import ru.yavasilek.netpulse.network.NetworkQualityProbe
 import ru.yavasilek.netpulse.network.PublicIpResolver
 import ru.yavasilek.netpulse.network.TrafficSampler
 import ru.yavasilek.netpulse.settings.SettingsRepository
@@ -22,6 +23,7 @@ class AppContainer(
         applicationScope = applicationScope,
         connectivityObserver = ConnectivityObserver(context),
         trafficSampler = TrafficSampler(),
+        networkQualityProbe = NetworkQualityProbe(),
         publicIpResolver = PublicIpResolver(),
         eventStore = eventStore,
     )

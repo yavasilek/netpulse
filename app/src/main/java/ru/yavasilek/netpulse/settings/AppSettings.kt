@@ -32,6 +32,7 @@ data class AppSettings(
     val warnWhenIpChanges: Boolean = false,
     val automaticUpdateChecks: Boolean = true,
     val dynamicColor: Boolean = true,
+    val showNetworkDetailsOnLockScreen: Boolean = false,
     val requireVpnForProtection: Boolean = true,
     val trustedExitProfile: TrustedExitProfile? = null,
 )

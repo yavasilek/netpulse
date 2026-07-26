@@ -41,6 +41,8 @@ class UpdateManager(
     private val downloadManager = context.getSystemService(DownloadManager::class.java)
     private val preferences =
         context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
+    private val checkPreferences =
+        context.getSharedPreferences(CHECK_PREFERENCES_NAME, Context.MODE_PRIVATE)
     private val _state = MutableStateFlow<UpdateState>(restoreState())
     private val downloadHandleMutex = Mutex()
     private var progressJob: Job? = null
@@ -84,7 +86,24 @@ class UpdateManager(
                 },
             )
         _state.value = result
+        if (result !is UpdateState.Error) {
+            checkPreferences.edit {
+                putLong(KEY_LAST_SUCCESSFUL_CHECK, System.currentTimeMillis())
+            }
+        }
         return result
+    }
+
+    suspend fun checkIfStale(
+        nowMillis: Long = System.currentTimeMillis(),
+        cooldownMillis: Long = CHECK_ON_LAUNCH_COOLDOWN,
+    ): UpdateState {
+        val lastChecked = checkPreferences.getLong(KEY_LAST_SUCCESSFUL_CHECK, 0L)
+        return if (nowMillis - lastChecked >= cooldownMillis) {
+            check()
+        } else {
+            _state.value
+        }
     }
 
     fun download(release: ReleaseInfo) {
@@ -505,6 +524,8 @@ class UpdateManager(
 
     private companion object {
         const val PREFERENCES_NAME = "netpulse_update"
+        const val CHECK_PREFERENCES_NAME = "netpulse_update_checks"
+        const val KEY_LAST_SUCCESSFUL_CHECK = "last_successful_check"
         const val KEY_DOWNLOAD_ID = "download_id"
         const val KEY_FILE_PATH = "file_path"
         const val KEY_VERSION = "version"
@@ -515,5 +536,6 @@ class UpdateManager(
         const val APK_MIME_TYPE = "application/vnd.android.package-archive"
         const val UPDATE_CHANNEL_ID = "app_updates"
         const val UPDATE_NOTIFICATION_ID = 2001
+        const val CHECK_ON_LAUNCH_COOLDOWN = 12 * 60 * 60 * 1_000L
     }
 }

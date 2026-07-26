@@ -1,18 +1,23 @@
 package ru.yavasilek.netpulse.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -21,18 +26,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import ru.yavasilek.netpulse.BuildConfig
+import ru.yavasilek.netpulse.model.ConnectionStatus
+import ru.yavasilek.netpulse.model.MonitorSnapshot
 import ru.yavasilek.netpulse.settings.AppSettings
 import ru.yavasilek.netpulse.settings.SpeedUnit
 import ru.yavasilek.netpulse.settings.StatusIconMode
 import ru.yavasilek.netpulse.ui.components.SettingsSwitch
+import ru.yavasilek.netpulse.ui.theme.PulseAmber
+import ru.yavasilek.netpulse.ui.theme.PulseGreen
+import ru.yavasilek.netpulse.ui.theme.PulseRed
 import ru.yavasilek.netpulse.update.UpdateState
 import ru.yavasilek.netpulse.util.FileSizeFormatter
 
 @Composable
 fun SettingsScreen(
     settings: AppSettings,
+    snapshot: MonitorSnapshot,
     updateState: UpdateState,
     notificationPermissionGranted: Boolean,
+    batteryOptimizationIgnored: Boolean,
     onRequestNotificationPermission: () -> Unit,
     onMonitoringChange: (Boolean) -> Unit,
     onStartOnBootChange: (Boolean) -> Unit,
@@ -42,7 +54,10 @@ fun SettingsScreen(
     onIpWarningChange: (Boolean) -> Unit,
     onAutomaticUpdatesChange: (Boolean) -> Unit,
     onDynamicColorChange: (Boolean) -> Unit,
+    onLockScreenDetailsChange: (Boolean) -> Unit,
     onRequireVpnForProtectionChange: (Boolean) -> Unit,
+    onOpenBatterySettings: () -> Unit,
+    onOpenVpnSettings: () -> Unit,
     onCheckUpdates: () -> Unit,
     onDownloadUpdate: (ru.yavasilek.netpulse.update.ReleaseInfo) -> Unit,
     onInstallUpdate: () -> Unit,
@@ -94,6 +109,107 @@ fun SettingsScreen(
                     checked = settings.dynamicColor,
                     onCheckedChange = onDynamicColorChange,
                 )
+                SettingsSwitch(
+                    title = "IP на экране блокировки",
+                    description = "Показывать адрес и страну до разблокировки телефона",
+                    checked = settings.showNetworkDetailsOnLockScreen,
+                    onCheckedChange = onLockScreenDetailsChange,
+                )
+            }
+        }
+
+        item {
+            SettingsSection("Самодиагностика") {
+                HealthRow(
+                    title = "Фоновый мониторинг",
+                    value = if (settings.monitoringEnabled && snapshot.isMonitoring) {
+                        "Работает"
+                    } else {
+                        "Остановлен"
+                    },
+                    status = if (settings.monitoringEnabled && snapshot.isMonitoring) {
+                        HealthStatus.OK
+                    } else {
+                        HealthStatus.ERROR
+                    },
+                )
+                HealthRow(
+                    title = "Уведомления",
+                    value = if (notificationPermissionGranted) "Разрешены" else "Запрещены",
+                    status = if (notificationPermissionGranted) {
+                        HealthStatus.OK
+                    } else {
+                        HealthStatus.ERROR
+                    },
+                )
+                HealthRow(
+                    title = "Доступ в интернет",
+                    value = when (snapshot.connection.status) {
+                        ConnectionStatus.ONLINE -> "Подтверждён"
+                        ConnectionStatus.CHECKING -> "Проверяется"
+                        ConnectionStatus.CAPTIVE_PORTAL -> "Требуется вход"
+                        ConnectionStatus.LIMITED -> "Не подтверждён"
+                        ConnectionStatus.OFFLINE -> "Нет соединения"
+                    },
+                    status = when (snapshot.connection.status) {
+                        ConnectionStatus.ONLINE -> HealthStatus.OK
+                        ConnectionStatus.CHECKING,
+                        ConnectionStatus.LIMITED,
+                        -> HealthStatus.WARNING
+                        ConnectionStatus.CAPTIVE_PORTAL,
+                        ConnectionStatus.OFFLINE,
+                        -> HealthStatus.ERROR
+                    },
+                )
+                HealthRow(
+                    title = "Определение публичного IP",
+                    value = when {
+                        snapshot.publicIp.isRefreshing -> "Обновляется"
+                        snapshot.publicIp.primary != null -> "Работает"
+                        else -> "Нет данных"
+                    },
+                    status = when {
+                        snapshot.publicIp.isRefreshing -> HealthStatus.WARNING
+                        snapshot.publicIp.primary != null -> HealthStatus.OK
+                        else -> HealthStatus.ERROR
+                    },
+                )
+                HealthRow(
+                    title = "Проверка обновлений",
+                    value = if (settings.automaticUpdateChecks) "Автоматически" else "Вручную",
+                    status = if (settings.automaticUpdateChecks) {
+                        HealthStatus.OK
+                    } else {
+                        HealthStatus.WARNING
+                    },
+                )
+                HealthRow(
+                    title = "Ограничения батареи",
+                    value = if (batteryOptimizationIgnored) {
+                        "Сняты для NetPulse"
+                    } else {
+                        "Управляет Android"
+                    },
+                    status = if (batteryOptimizationIgnored) {
+                        HealthStatus.OK
+                    } else {
+                        HealthStatus.WARNING
+                    },
+                )
+                OutlinedButton(
+                    onClick = onOpenBatterySettings,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                ) {
+                    Text("Открыть настройки батареи")
+                }
+                OutlinedButton(
+                    onClick = onOpenVpnSettings,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Открыть настройки VPN")
+                }
             }
         }
 
@@ -261,6 +377,13 @@ private fun UpdateContent(
             is UpdateState.Error -> state.message
         }
         Text(text, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (state is UpdateState.Available && state.release.notes.isNotBlank()) {
+            Text(
+                text = state.release.notes.take(MAX_RELEASE_NOTES_LENGTH),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         when (state) {
             UpdateState.Checking,
             is UpdateState.Preparing,
@@ -304,6 +427,46 @@ private fun UpdateContent(
         }
     }
 }
+
+private enum class HealthStatus {
+    OK,
+    WARNING,
+    ERROR,
+}
+
+@Composable
+private fun HealthRow(
+    title: String,
+    value: String,
+    status: HealthStatus,
+) {
+    val color = when (status) {
+        HealthStatus.OK -> PulseGreen
+        HealthStatus.WARNING -> PulseAmber
+        HealthStatus.ERROR -> PulseRed
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 9.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(9.dp)
+                .background(color, CircleShape),
+        )
+        Text(title, modifier = Modifier.weight(1f))
+        Text(
+            value,
+            color = color,
+            fontWeight = FontWeight.Medium,
+        )
+    }
+}
+
+private const val MAX_RELEASE_NOTES_LENGTH = 600
 
 private fun StatusIconMode.label(): String = when (this) {
     StatusIconMode.DOWNLOAD -> "Входящая скорость"

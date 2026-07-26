@@ -48,6 +48,23 @@ data class SpeedSample(
     val sampledAtMillis: Long = System.currentTimeMillis(),
 )
 
+enum class NetworkQualityStatus {
+    CHECKING,
+    EXCELLENT,
+    GOOD,
+    UNSTABLE,
+    UNAVAILABLE,
+}
+
+data class NetworkQuality(
+    val status: NetworkQualityStatus = NetworkQualityStatus.CHECKING,
+    val latencyMillis: Int? = null,
+    val jitterMillis: Int? = null,
+    val packetLossPercent: Int? = null,
+    val checkedAtMillis: Long? = null,
+    val errorMessage: String? = null,
+)
+
 data class IpAddressInfo(
     val address: String,
     val countryCode: String?,
@@ -83,6 +100,7 @@ data class MonitorSnapshot(
     val connection: ConnectionInfo = ConnectionInfo(),
     val speed: SpeedSample = SpeedSample(),
     val speedHistory: List<SpeedSample> = emptyList(),
+    val quality: NetworkQuality = NetworkQuality(),
     val publicIp: PublicIpInfo = PublicIpInfo(),
     val isMonitoring: Boolean = false,
 )
@@ -91,6 +109,7 @@ enum class NetworkEventType {
     CONNECTION,
     VPN,
     IP,
+    QUALITY,
     WARNING,
 }
 
