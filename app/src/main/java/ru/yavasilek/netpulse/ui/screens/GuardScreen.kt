@@ -1,6 +1,7 @@
 package ru.yavasilek.netpulse.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,12 +23,19 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import ru.yavasilek.netpulse.model.ConnectionStatus
 import ru.yavasilek.netpulse.model.MonitorSnapshot
 import ru.yavasilek.netpulse.ui.components.DetailCard
+import ru.yavasilek.netpulse.ui.theme.ProtectionActiveContainerDark
+import ru.yavasilek.netpulse.ui.theme.ProtectionActiveContainerLight
+import ru.yavasilek.netpulse.ui.theme.ProtectionActiveContentDark
+import ru.yavasilek.netpulse.ui.theme.ProtectionActiveContentLight
+import ru.yavasilek.netpulse.ui.theme.PulseGreen
+import ru.yavasilek.netpulse.ui.theme.PulseGreenDark
 
 @Composable
 fun GuardScreen(
@@ -38,6 +46,18 @@ fun GuardScreen(
     val vpnActive = snapshot.connection.isVpn
     val refreshing = snapshot.publicIp.isRefreshing
     val refreshingLabel = "Обновляется…"
+    val darkTheme = isSystemInDarkTheme()
+    val activeContainerColor = if (darkTheme) {
+        ProtectionActiveContainerDark
+    } else {
+        ProtectionActiveContainerLight
+    }
+    val activeContentColor = if (darkTheme) {
+        ProtectionActiveContentDark
+    } else {
+        ProtectionActiveContentLight
+    }
+    val successColor = if (darkTheme) PulseGreenDark else PulseGreen
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -50,7 +70,7 @@ fun GuardScreen(
                 .size(82.dp)
                 .background(
                     color = if (vpnActive) {
-                        MaterialTheme.colorScheme.primaryContainer
+                        activeContainerColor
                     } else {
                         MaterialTheme.colorScheme.errorContainer
                     },
@@ -63,7 +83,7 @@ fun GuardScreen(
                 contentDescription = null,
                 modifier = Modifier.size(42.dp),
                 tint = if (vpnActive) {
-                    MaterialTheme.colorScheme.onPrimaryContainer
+                    activeContentColor
                 } else {
                     MaterialTheme.colorScheme.onErrorContainer
                 },
@@ -124,6 +144,7 @@ fun GuardScreen(
             SecurityCheck(
                 ok = vpnActive,
                 text = if (vpnActive) "VPN активен" else "VPN сейчас не защищает трафик",
+                successColor = successColor,
             )
             SecurityCheck(
                 ok = !snapshot.publicIp.hasPossibleIpv6Leak,
@@ -132,6 +153,7 @@ fun GuardScreen(
                 } else {
                     "Признаков IPv6-утечки нет"
                 },
+                successColor = successColor,
             )
             SecurityCheck(
                 ok = snapshot.publicIp.errorMessage == null,
@@ -140,6 +162,7 @@ fun GuardScreen(
                     snapshot.publicIp.errorMessage != null -> snapshot.publicIp.errorMessage
                     else -> "Публичный IP проверен"
                 },
+                successColor = successColor,
             )
         }
 
@@ -164,6 +187,7 @@ fun GuardScreen(
 private fun SecurityCheck(
     ok: Boolean,
     text: String,
+    successColor: Color,
 ) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -172,7 +196,7 @@ private fun SecurityCheck(
         Icon(
             imageVector = if (ok) Icons.Outlined.CheckCircle else Icons.Outlined.ErrorOutline,
             contentDescription = null,
-            tint = if (ok) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+            tint = if (ok) successColor else MaterialTheme.colorScheme.error,
         )
         Text(text, modifier = Modifier.weight(1f))
     }
