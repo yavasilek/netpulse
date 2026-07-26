@@ -19,26 +19,51 @@ import androidx.core.net.toUri
 import ru.yavasilek.netpulse.BuildConfig
 import ru.yavasilek.netpulse.MainActivity
 import ru.yavasilek.netpulse.R
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.security.MessageDigest
 
 class UpdateManager(
     private val context: Context,
+    private val applicationScope: CoroutineScope,
     private val releaseClient: GitHubReleaseClient,
 ) {
     private val downloadManager = context.getSystemService(DownloadManager::class.java)
     private val preferences =
         context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
     private val _state = MutableStateFlow<UpdateState>(restoreState())
+    private val downloadHandleMutex = Mutex()
+    private var progressJob: Job? = null
 
     val state: StateFlow<UpdateState> = _state.asStateFlow()
 
+    init {
+        if (_state.value is UpdateState.Downloading) {
+            val downloadId = preferences.getLong(KEY_DOWNLOAD_ID, -1)
+            if (downloadId >= 0) startProgressTracking(downloadId)
+        }
+    }
+
     suspend fun check(): UpdateState {
+        val current = _state.value
+        if (
+            current is UpdateState.Preparing ||
+            current is UpdateState.Downloading ||
+            current is UpdateState.Verifying ||
+            current is UpdateState.ReadyToInstall
+        ) {
+            return current
+        }
         _state.value = UpdateState.Checking
         val result = runCatching { releaseClient.latestRelease() }
             .fold(
@@ -63,56 +88,74 @@ class UpdateManager(
     }
 
     fun download(release: ReleaseInfo) {
+        if (
+            _state.value is UpdateState.Preparing ||
+            _state.value is UpdateState.Downloading ||
+            _state.value is UpdateState.Verifying
+        ) {
+            return
+        }
         if (BuildConfig.DEBUG) {
             _state.value = UpdateState.Error(
                 "Установка обновлений проверяется в подписанной release-сборке",
             )
             return
         }
-        val downloadDirectory =
-            requireNotNull(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS))
-        val destination = File(downloadDirectory, release.apk.name)
-        if (destination.exists()) destination.delete()
+        _state.value = UpdateState.Preparing(release.versionName)
+        try {
+            val downloadDirectory =
+                requireNotNull(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS))
+            val destination = File(downloadDirectory, release.apk.name)
+            if (destination.exists()) destination.delete()
 
-        val request = DownloadManager.Request(release.apk.downloadUrl.toUri())
-            .setTitle("NetPulse ${release.versionName}")
-            .setDescription("Загрузка обновления")
-            .setMimeType(APK_MIME_TYPE)
-            .setNotificationVisibility(
-                DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED,
-            )
-            .setDestinationInExternalFilesDir(
-                context,
-                Environment.DIRECTORY_DOWNLOADS,
-                release.apk.name,
-            )
-            .setAllowedOverMetered(true)
-            .setAllowedOverRoaming(false)
+            val request = DownloadManager.Request(release.apk.downloadUrl.toUri())
+                .setTitle("NetPulse ${release.versionName}")
+                .setDescription("Загрузка обновления")
+                .setMimeType(APK_MIME_TYPE)
+                .setNotificationVisibility(
+                    DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED,
+                )
+                .setDestinationInExternalFilesDir(
+                    context,
+                    Environment.DIRECTORY_DOWNLOADS,
+                    release.apk.name,
+                )
+                .setAllowedOverMetered(true)
+                .setAllowedOverRoaming(false)
 
-        val downloadId = downloadManager.enqueue(request)
-        preferences.edit {
-            putLong(KEY_DOWNLOAD_ID, downloadId)
-            putString(KEY_FILE_PATH, destination.absolutePath)
-            putString(KEY_VERSION, release.versionName)
-            putString(KEY_SHA256, release.apk.sha256)
+            val downloadId = downloadManager.enqueue(request)
+            preferences.edit {
+                putLong(KEY_DOWNLOAD_ID, downloadId)
+                putString(KEY_FILE_PATH, destination.absolutePath)
+                putString(KEY_VERSION, release.versionName)
+                putString(KEY_SHA256, release.apk.sha256)
+                putLong(KEY_TOTAL_BYTES, release.apk.sizeBytes)
+            }
+            _state.value = UpdateState.Downloading(
+                versionName = release.versionName,
+                downloadedBytes = 0,
+                totalBytes = release.apk.sizeBytes.takeIf { it > 0 },
+            )
+            startProgressTracking(downloadId)
+        } catch (error: Exception) {
+            clearPending()
+            _state.value = UpdateState.Error(
+                error.message ?: "Не удалось начать загрузку обновления",
+            )
         }
-        _state.value = UpdateState.Downloading(release)
     }
 
-    suspend fun handleDownload(downloadId: Long) = withContext(Dispatchers.IO) {
+    suspend fun handleDownload(downloadId: Long) = downloadHandleMutex.withLock {
+        handleDownloadLocked(downloadId)
+    }
+
+    private suspend fun handleDownloadLocked(downloadId: Long) = withContext(Dispatchers.IO) {
         if (preferences.getLong(KEY_DOWNLOAD_ID, -1) != downloadId) return@withContext
-        val cursor = downloadManager.query(
-            DownloadManager.Query().setFilterById(downloadId),
-        )
-        val successful = cursor.use {
-            if (!it.moveToFirst()) false
-            else {
-                val statusIndex = it.getColumnIndex(DownloadManager.COLUMN_STATUS)
-                statusIndex >= 0 &&
-                    it.getInt(statusIndex) == DownloadManager.STATUS_SUCCESSFUL
-            }
-        }
+        if (preferences.getBoolean(KEY_READY, false)) return@withContext
+        val successful =
+            queryDownload(downloadId)?.status == DownloadManager.STATUS_SUCCESSFUL
         if (!successful) {
+            clearPending()
             _state.value = UpdateState.Error("Загрузка обновления не завершена")
             return@withContext
         }
@@ -120,9 +163,11 @@ class UpdateManager(
         val path = preferences.getString(KEY_FILE_PATH, null)
         val version = preferences.getString(KEY_VERSION, null)
         if (path == null || version == null) {
+            clearPending()
             _state.value = UpdateState.Error("Не найдены данные загруженного APK")
             return@withContext
         }
+        _state.value = UpdateState.Verifying(version)
         val file = File(path)
         val verificationError = verify(file)
         if (verificationError != null) {
@@ -133,9 +178,100 @@ class UpdateManager(
             return@withContext
         }
 
-        preferences.edit { putBoolean(KEY_READY, true) }
+        preferences.edit(commit = true) { putBoolean(KEY_READY, true) }
         _state.value = UpdateState.ReadyToInstall(version, path)
         notifyReadyToInstall(version)
+    }
+
+    private fun startProgressTracking(downloadId: Long) {
+        progressJob?.cancel()
+        progressJob = applicationScope.launch(Dispatchers.IO) {
+            while (true) {
+                val snapshot = runCatching { queryDownload(downloadId) }.getOrNull()
+                if (snapshot == null) {
+                    clearPending()
+                    _state.value = UpdateState.Error("Загрузка обновления не найдена")
+                    return@launch
+                }
+
+                when (snapshot.status) {
+                    DownloadManager.STATUS_SUCCESSFUL -> {
+                        handleDownload(downloadId)
+                        return@launch
+                    }
+                    DownloadManager.STATUS_FAILED -> {
+                        clearPending()
+                        _state.value = UpdateState.Error(
+                            downloadFailureMessage(snapshot.reason),
+                        )
+                        return@launch
+                    }
+                    DownloadManager.STATUS_PENDING,
+                    DownloadManager.STATUS_RUNNING,
+                    DownloadManager.STATUS_PAUSED,
+                    -> {
+                        val version = preferences.getString(KEY_VERSION, null)
+                        if (version == null) {
+                            clearPending()
+                            _state.value = UpdateState.Error(
+                                "Не найдены данные загружаемого обновления",
+                            )
+                            return@launch
+                        }
+                        val reportedTotal = snapshot.totalBytes.takeIf { it > 0 }
+                        val expectedTotal = preferences
+                            .getLong(KEY_TOTAL_BYTES, -1)
+                            .takeIf { it > 0 }
+                        _state.value = UpdateState.Downloading(
+                            versionName = version,
+                            downloadedBytes = snapshot.downloadedBytes.coerceAtLeast(0),
+                            totalBytes = reportedTotal ?: expectedTotal,
+                            isPaused = snapshot.status == DownloadManager.STATUS_PAUSED,
+                        )
+                    }
+                }
+                delay(PROGRESS_POLL_INTERVAL)
+            }
+        }
+    }
+
+    private fun queryDownload(downloadId: Long): DownloadSnapshot? {
+        val cursor = downloadManager.query(
+            DownloadManager.Query().setFilterById(downloadId),
+        )
+        return cursor.use {
+            if (!it.moveToFirst()) return@use null
+            DownloadSnapshot(
+                status = it.getInt(
+                    it.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS),
+                ),
+                reason = it.getInt(
+                    it.getColumnIndexOrThrow(DownloadManager.COLUMN_REASON),
+                ),
+                downloadedBytes = it.getLong(
+                    it.getColumnIndexOrThrow(
+                        DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR,
+                    ),
+                ),
+                totalBytes = it.getLong(
+                    it.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES),
+                ),
+            )
+        }
+    }
+
+    private fun downloadFailureMessage(reason: Int): String = when (reason) {
+        DownloadManager.ERROR_INSUFFICIENT_SPACE ->
+            "Недостаточно места для загрузки обновления"
+        DownloadManager.ERROR_DEVICE_NOT_FOUND ->
+            "Хранилище для обновления недоступно"
+        DownloadManager.ERROR_CANNOT_RESUME ->
+            "Не удалось продолжить загрузку обновления"
+        DownloadManager.ERROR_HTTP_DATA_ERROR,
+        DownloadManager.ERROR_TOO_MANY_REDIRECTS,
+        DownloadManager.ERROR_UNHANDLED_HTTP_CODE,
+        -> "GitHub прервал загрузку обновления"
+        else -> "Не удалось загрузить обновление"
     }
 
     fun requestInstall(): InstallRequestResult {
@@ -272,10 +408,28 @@ class UpdateManager(
         val ready = preferences.getBoolean(KEY_READY, false)
         val version = preferences.getString(KEY_VERSION, null)
         val path = preferences.getString(KEY_FILE_PATH, null)
-        return if (ready && version != null && path != null && File(path).isFile) {
-            UpdateState.ReadyToInstall(version, path)
-        } else {
-            UpdateState.Idle
+        val downloadId = preferences.getLong(KEY_DOWNLOAD_ID, -1)
+        if (
+            version != null &&
+            !VersionComparator.isNewer(version, BuildConfig.VERSION_NAME)
+        ) {
+            if (downloadId >= 0) downloadManager.remove(downloadId)
+            path?.let { File(it).delete() }
+            preferences.edit(commit = true) { clear() }
+            return UpdateState.Idle
+        }
+        return when {
+            ready && version != null && path != null && File(path).isFile ->
+                UpdateState.ReadyToInstall(version, path)
+            downloadId >= 0 && version != null ->
+                UpdateState.Downloading(
+                    versionName = version,
+                    downloadedBytes = 0,
+                    totalBytes = preferences
+                        .getLong(KEY_TOTAL_BYTES, -1)
+                        .takeIf { it > 0 },
+                )
+            else -> UpdateState.Idle
         }
     }
 
@@ -342,13 +496,22 @@ class UpdateManager(
         NotReady,
     }
 
+    private data class DownloadSnapshot(
+        val status: Int,
+        val reason: Int,
+        val downloadedBytes: Long,
+        val totalBytes: Long,
+    )
+
     private companion object {
         const val PREFERENCES_NAME = "netpulse_update"
         const val KEY_DOWNLOAD_ID = "download_id"
         const val KEY_FILE_PATH = "file_path"
         const val KEY_VERSION = "version"
         const val KEY_SHA256 = "sha256"
+        const val KEY_TOTAL_BYTES = "total_bytes"
         const val KEY_READY = "ready"
+        const val PROGRESS_POLL_INTERVAL = 300L
         const val APK_MIME_TYPE = "application/vnd.android.package-archive"
         const val UPDATE_CHANNEL_ID = "app_updates"
         const val UPDATE_NOTIFICATION_ID = 2001
