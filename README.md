@@ -70,7 +70,7 @@ Debug APK появится в `app/build/outputs/apk/debug/`.
 
 NetPulse не содержит рекламы, аналитики и трекеров. Настройки и история событий
 хранятся только на устройстве. Для определения публичных адресов и страны
-используются `api4.ipify.org`, `api6.ipify.org` и `api.country.is`.
+используются `ipinfo.io`, `api4.ipify.org`, `api6.ipify.org` и `api.country.is`.
 
 Подробности: [PRIVACY.md](PRIVACY.md).
 

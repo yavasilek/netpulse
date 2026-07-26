@@ -60,19 +60,36 @@ class MonitorNotificationFactory(
         )
         val status = snapshot.connection.status.label()
         val country = snapshot.publicIp.countryName
+        val refreshingPublicIp = snapshot.publicIp.isRefreshing
         val summary = buildList {
             add(status)
             if (snapshot.connection.isVpn) add("VPN")
-            if (!country.isNullOrBlank()) add(country)
+            if (refreshingPublicIp) {
+                add("IP обновляется")
+            } else if (!country.isNullOrBlank()) {
+                add(country)
+            }
         }.joinToString(" · ")
         val bigText = buildString {
             appendLine(summary)
             appendLine(snapshot.connection.transportLabel)
             append("IPv4: ")
-            append(snapshot.publicIp.ipv4?.address ?: "не определён")
+            append(
+                if (refreshingPublicIp) {
+                    "обновляется…"
+                } else {
+                    snapshot.publicIp.ipv4?.address ?: "не определён"
+                },
+            )
             appendLine()
             append("IPv6: ")
-            append(snapshot.publicIp.ipv6?.address ?: "не обнаружен")
+            append(
+                if (refreshingPublicIp) {
+                    "обновляется…"
+                } else {
+                    snapshot.publicIp.ipv6?.address ?: "не обнаружен"
+                },
+            )
         }
 
         return Notification.Builder(context, MONITOR_CHANNEL_ID)

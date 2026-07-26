@@ -10,7 +10,7 @@ NetPulse использует один Gradle-модуль и разделени
 flowchart LR
     CM["ConnectivityManager"] --> CO["ConnectivityObserver"]
     TS["TrafficStats"] --> SM["TrafficSampler"]
-    IP["ipify + country.is"] --> PR["PublicIpResolver"]
+    IP["IPinfo + ipify + country.is"] --> PR["PublicIpResolver"]
     CO --> MR["MonitorRepository"]
     SM --> MR
     PR --> MR

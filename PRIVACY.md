@@ -20,6 +20,7 @@ NetPulse создан как локальный сетевой инструме�
 
 Для определения публичного адреса и страны приложение обращается к:
 
+- `https://ipinfo.io`;
 - `https://api4.ipify.org`;
 - `https://api6.ipify.org`;
 - `https://api.country.is`.

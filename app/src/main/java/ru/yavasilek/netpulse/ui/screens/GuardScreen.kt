@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import ru.yavasilek.netpulse.model.ConnectionStatus
 import ru.yavasilek.netpulse.model.MonitorSnapshot
 import ru.yavasilek.netpulse.ui.components.DetailCard
 
@@ -35,6 +36,8 @@ fun GuardScreen(
     modifier: Modifier = Modifier,
 ) {
     val vpnActive = snapshot.connection.isVpn
+    val refreshing = snapshot.publicIp.isRefreshing
+    val refreshingLabel = "Обновляется…"
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -78,7 +81,7 @@ fun GuardScreen(
             textAlign = TextAlign.Center,
         )
         Text(
-            text = if (snapshot.connection.status.name == "ONLINE") {
+            text = if (snapshot.connection.status == ConnectionStatus.ONLINE) {
                 "Доступ в интернет подтверждён"
             } else {
                 "Состояние интернета уточняется"
@@ -88,15 +91,29 @@ fun GuardScreen(
 
         DetailCard(
             rows = listOf(
-                "Точка выхода" to listOfNotNull(
-                    snapshot.publicIp.countryName,
-                    snapshot.publicIp.countryCode,
-                ).joinToString(" · ").ifBlank { "Определяется" },
-                "Публичный IPv4" to (snapshot.publicIp.ipv4?.address ?: "Не определён"),
-                "IPv6" to (snapshot.publicIp.ipv6?.address ?: "Не обнаружен"),
-                "Оператор узла" to (
+                "Точка выхода" to if (refreshing) {
+                    refreshingLabel
+                } else {
+                    listOfNotNull(
+                        snapshot.publicIp.countryName,
+                        snapshot.publicIp.countryCode,
+                    ).joinToString(" · ").ifBlank { "Определяется" }
+                },
+                "Публичный IPv4" to if (refreshing) {
+                    refreshingLabel
+                } else {
+                    snapshot.publicIp.ipv4?.address ?: "Не определён"
+                },
+                "IPv6" to if (refreshing) {
+                    refreshingLabel
+                } else {
+                    snapshot.publicIp.ipv6?.address ?: "Не обнаружен"
+                },
+                "Оператор узла" to if (refreshing) {
+                    refreshingLabel
+                } else {
                     snapshot.publicIp.primary?.asnOrganization ?: "Не определён"
-                    ),
+                },
             ),
         )
 
@@ -118,7 +135,11 @@ fun GuardScreen(
             )
             SecurityCheck(
                 ok = snapshot.publicIp.errorMessage == null,
-                text = snapshot.publicIp.errorMessage ?: "Публичный IP проверен",
+                text = when {
+                    refreshing -> "Обновляем IP и страну"
+                    snapshot.publicIp.errorMessage != null -> snapshot.publicIp.errorMessage
+                    else -> "Публичный IP проверен"
+                },
             )
         }
 

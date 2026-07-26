@@ -82,11 +82,19 @@ fun PulseScreen(
         DetailCard(
             rows = listOf(
                 "VPN" to if (snapshot.connection.isVpn) {
-                    "Активен · ${snapshot.publicIp.countryName ?: "страна уточняется"}"
+                    if (snapshot.publicIp.isRefreshing) {
+                        "Активен · страна обновляется"
+                    } else {
+                        "Активен · ${snapshot.publicIp.countryName ?: "страна уточняется"}"
+                    }
                 } else {
                     "Не обнаружен"
                 },
-                "IPv4" to (snapshot.publicIp.ipv4?.address ?: "Не определён"),
+                "IPv4" to if (snapshot.publicIp.isRefreshing) {
+                    "Обновляется…"
+                } else {
+                    snapshot.publicIp.ipv4?.address ?: "Не определён"
+                },
                 "Подключение" to snapshot.connection.transportLabel,
             ),
         )
