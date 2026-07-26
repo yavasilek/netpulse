@@ -56,6 +56,9 @@ fun NetPulseApp(
     onIpWarningChange: (Boolean) -> Unit,
     onAutomaticUpdatesChange: (Boolean) -> Unit,
     onDynamicColorChange: (Boolean) -> Unit,
+    onRequireVpnForProtectionChange: (Boolean) -> Unit,
+    onTrustCurrentExit: () -> Unit,
+    onClearTrustedExit: () -> Unit,
     onClearEvents: () -> Unit,
     onCheckUpdates: () -> Unit,
     onDownloadUpdate: (ReleaseInfo) -> Unit,
@@ -120,6 +123,7 @@ fun NetPulseApp(
                 onIpWarningChange = onIpWarningChange,
                 onAutomaticUpdatesChange = onAutomaticUpdatesChange,
                 onDynamicColorChange = onDynamicColorChange,
+                onRequireVpnForProtectionChange = onRequireVpnForProtectionChange,
                 onCheckUpdates = onCheckUpdates,
                 onDownloadUpdate = onDownloadUpdate,
                 onInstallUpdate = onInstallUpdate,
@@ -134,7 +138,10 @@ fun NetPulseApp(
                 )
                 MainDestination.GUARD -> GuardScreen(
                     snapshot = state.monitor,
+                    settings = state.settings,
                     onRefresh = onRefreshPublicIp,
+                    onTrustCurrentExit = onTrustCurrentExit,
+                    onClearTrustedExit = onClearTrustedExit,
                     modifier = modifier,
                 )
                 MainDestination.EVENTS -> EventsScreen(

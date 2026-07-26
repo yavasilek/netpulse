@@ -12,6 +12,7 @@ import ru.yavasilek.netpulse.monitoring.MonitoringController
 import ru.yavasilek.netpulse.settings.AppSettings
 import ru.yavasilek.netpulse.settings.SpeedUnit
 import ru.yavasilek.netpulse.settings.StatusIconMode
+import ru.yavasilek.netpulse.settings.TrustedExitProfile
 import ru.yavasilek.netpulse.update.ReleaseInfo
 import ru.yavasilek.netpulse.update.UpdateScheduler
 import ru.yavasilek.netpulse.update.UpdateState
@@ -20,6 +21,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 data class NetPulseUiState(
     val monitor: MonitorSnapshot = MonitorSnapshot(),
@@ -109,6 +111,32 @@ class NetPulseViewModel(
     fun setDynamicColor(enabled: Boolean) {
         viewModelScope.launch {
             container.settingsRepository.setDynamicColor(enabled)
+        }
+    }
+
+    fun setRequireVpnForProtection(enabled: Boolean) {
+        viewModelScope.launch {
+            container.settingsRepository.setRequireVpnForProtection(enabled)
+        }
+    }
+
+    fun trustCurrentExit() {
+        val current = uiState.value.monitor.publicIp.primary ?: return
+        val countryCode = current.countryCode ?: return
+        viewModelScope.launch {
+            container.settingsRepository.setTrustedExitProfile(
+                TrustedExitProfile(
+                    countryCode = countryCode.uppercase(Locale.ROOT),
+                    countryName = current.countryName,
+                    asnOrganization = current.asnOrganization,
+                ),
+            )
+        }
+    }
+
+    fun clearTrustedExit() {
+        viewModelScope.launch {
+            container.settingsRepository.setTrustedExitProfile(null)
         }
     }
 

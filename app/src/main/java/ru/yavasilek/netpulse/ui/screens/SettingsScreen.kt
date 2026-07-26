@@ -42,6 +42,7 @@ fun SettingsScreen(
     onIpWarningChange: (Boolean) -> Unit,
     onAutomaticUpdatesChange: (Boolean) -> Unit,
     onDynamicColorChange: (Boolean) -> Unit,
+    onRequireVpnForProtectionChange: (Boolean) -> Unit,
     onCheckUpdates: () -> Unit,
     onDownloadUpdate: (ru.yavasilek.netpulse.update.ReleaseInfo) -> Unit,
     onInstallUpdate: () -> Unit,
@@ -120,6 +121,32 @@ fun SettingsScreen(
                         onClick = { onStatusIconModeChange(mode) },
                     )
                 }
+            }
+        }
+
+        item {
+            SettingsSection("Профиль защиты") {
+                SettingsSwitch(
+                    title = "VPN обязателен",
+                    description = "Считать соединение защищённым только при активном VPN",
+                    checked = settings.requireVpnForProtection,
+                    onCheckedChange = onRequireVpnForProtectionChange,
+                )
+                Text(
+                    text = settings.trustedExitProfile?.let { profile ->
+                        val place = listOfNotNull(
+                            profile.countryName,
+                            profile.countryCode,
+                        ).joinToString(" · ")
+                        val provider = profile.asnOrganization
+                            ?.let { "\nОператор: $it" }
+                            .orEmpty()
+                        "Доверенная точка: $place$provider"
+                    } ?: "Доверенная точка ещё не задана. Её можно сохранить на экране «Защита».",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 10.dp),
+                )
             }
         }
 

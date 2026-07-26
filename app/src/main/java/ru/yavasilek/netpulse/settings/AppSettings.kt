@@ -17,6 +17,12 @@ enum class StatusIconMode {
     }
 }
 
+data class TrustedExitProfile(
+    val countryCode: String,
+    val countryName: String?,
+    val asnOrganization: String?,
+)
+
 data class AppSettings(
     val monitoringEnabled: Boolean = true,
     val startOnBoot: Boolean = true,
@@ -26,4 +32,6 @@ data class AppSettings(
     val warnWhenIpChanges: Boolean = false,
     val automaticUpdateChecks: Boolean = true,
     val dynamicColor: Boolean = true,
+    val requireVpnForProtection: Boolean = true,
+    val trustedExitProfile: TrustedExitProfile? = null,
 )

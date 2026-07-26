@@ -12,6 +12,8 @@ import ru.yavasilek.netpulse.MainActivity
 import ru.yavasilek.netpulse.R
 import ru.yavasilek.netpulse.model.ConnectionStatus
 import ru.yavasilek.netpulse.model.MonitorSnapshot
+import ru.yavasilek.netpulse.protection.ProtectionEvaluator
+import ru.yavasilek.netpulse.protection.ProtectionStatus
 import ru.yavasilek.netpulse.settings.AppSettings
 import ru.yavasilek.netpulse.util.SpeedFormatter
 
@@ -59,11 +61,12 @@ class MonitorNotificationFactory(
             settings.speedUnit,
         )
         val status = snapshot.connection.status.label()
+        val protection = ProtectionEvaluator.evaluate(snapshot, settings)
         val country = snapshot.publicIp.countryName
         val refreshingPublicIp = snapshot.publicIp.isRefreshing
         val summary = buildList {
             add(status)
-            if (snapshot.connection.isVpn) add("VPN")
+            add(protection.status.notificationLabel())
             if (refreshingPublicIp) {
                 add("IP обновляется")
             } else if (!country.isNullOrBlank()) {
@@ -154,6 +157,12 @@ class MonitorNotificationFactory(
         ConnectionStatus.CAPTIVE_PORTAL -> "Требуется вход"
         ConnectionStatus.LIMITED -> "Интернет не подтверждён"
         ConnectionStatus.OFFLINE -> "Нет интернета"
+    }
+
+    private fun ProtectionStatus.notificationLabel(): String = when (this) {
+        ProtectionStatus.PROTECTED -> "Защита: норма"
+        ProtectionStatus.ATTENTION -> "Защита: проверка"
+        ProtectionStatus.DANGER -> "Защита: риск"
     }
 
     companion object {
