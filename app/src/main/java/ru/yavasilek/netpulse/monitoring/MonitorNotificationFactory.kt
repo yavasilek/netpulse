@@ -18,7 +18,7 @@ import ru.yavasilek.netpulse.util.SpeedFormatter
 class MonitorNotificationFactory(
     private val context: Context,
 ) {
-    private val iconRenderer = StatusIconRenderer(context)
+    private val iconRenderer = StatusIconRenderer()
 
     fun ensureChannels() {
         val manager = context.getSystemService(NotificationManager::class.java)

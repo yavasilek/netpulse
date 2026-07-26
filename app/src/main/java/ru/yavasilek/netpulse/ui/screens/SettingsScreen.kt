@@ -246,5 +246,4 @@ private fun StatusIconMode.label(): String = when (this) {
     StatusIconMode.DOWNLOAD -> "Входящая скорость"
     StatusIconMode.UPLOAD -> "Исходящая скорость"
     StatusIconMode.DOMINANT -> "Большая из двух"
-    StatusIconMode.STATIC -> "Обычный значок"
 }

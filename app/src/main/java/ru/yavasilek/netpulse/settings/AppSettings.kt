@@ -9,7 +9,12 @@ enum class StatusIconMode {
     DOWNLOAD,
     UPLOAD,
     DOMINANT,
-    STATIC,
+    ;
+
+    companion object {
+        fun fromStoredValue(value: String?): StatusIconMode =
+            entries.firstOrNull { it.name == value } ?: DOWNLOAD
+    }
 }
 
 data class AppSettings(

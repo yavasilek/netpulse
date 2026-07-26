@@ -42,9 +42,9 @@ class SettingsRepository(
                 speedUnit = preferences[Keys.speedUnit]
                     ?.let { value -> enumValueOrDefault(value, SpeedUnit.BITS_PER_SECOND) }
                     ?: SpeedUnit.BITS_PER_SECOND,
-                statusIconMode = preferences[Keys.statusIconMode]
-                    ?.let { value -> enumValueOrDefault(value, StatusIconMode.DOWNLOAD) }
-                    ?: StatusIconMode.DOWNLOAD,
+                statusIconMode = StatusIconMode.fromStoredValue(
+                    preferences[Keys.statusIconMode],
+                ),
                 warnWhenVpnDisconnects = preferences[Keys.warnWhenVpnDisconnects] ?: true,
                 warnWhenIpChanges = preferences[Keys.warnWhenIpChanges] ?: false,
                 automaticUpdateChecks = preferences[Keys.automaticUpdateChecks] ?: true,
