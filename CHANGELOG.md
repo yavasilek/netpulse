@@ -2,6 +2,15 @@
 
 Формат основан на Keep a Changelog, версии следуют Semantic Versioning.
 
+## [0.3.2] - 2026-07-26
+
+### Исправлено
+
+- при включённой настройке «IP на экране блокировки» адрес и страна теперь
+  видны сразу в свёрнутой карточке уведомления;
+- публичный IP помещён в начало строки, чтобы Pixel не обрезал его менее
+  важными статусами.
+
 ## [0.3.1] - 2026-07-26
 
 ### Исправлено
@@ -103,6 +112,7 @@
 - безопасное обновление из GitHub Releases;
 - тесты расчёта скорости и сравнения версий.
 
+[0.3.2]: https://github.com/yavasilek/netpulse/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/yavasilek/netpulse/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/yavasilek/netpulse/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/yavasilek/netpulse/compare/v0.1.4...v0.2.0

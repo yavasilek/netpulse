@@ -79,6 +79,19 @@ class MonitorNotificationFactory(
                 add(country)
             }
         }.joinToString(" · ")
+        val compactSummary = if (settings.showNetworkDetailsOnLockScreen) {
+            buildList {
+                if (refreshingPublicIp) {
+                    add("IP обновляется")
+                } else {
+                    snapshot.publicIp.primary?.address?.let { add("IP: $it") }
+                    if (!country.isNullOrBlank()) add(country)
+                }
+                add(protection.status.notificationLabel())
+            }.joinToString(" · ").ifBlank { summary }
+        } else {
+            summary
+        }
         val bigText = buildString {
             appendLine(summary)
             appendLine(snapshot.connection.transportLabel)
@@ -112,7 +125,7 @@ class MonitorNotificationFactory(
         val builder = Notification.Builder(context, MONITOR_CHANNEL_ID)
             .setSmallIcon(iconRenderer.render(snapshot.speed, settings))
             .setContentTitle("↓ $download · ↑ $upload")
-            .setContentText(summary)
+            .setContentText(compactSummary)
             .setStyle(Notification.BigTextStyle().bigText(bigText))
             .setContentIntent(activityPendingIntent())
             .setOnlyAlertOnce(true)
