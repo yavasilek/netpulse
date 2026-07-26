@@ -10,7 +10,15 @@ updates:
           - "androidx.*"
           - "com.android.*"
           - "org.jetbrains.kotlin*"
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-major
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: monthly
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-major
