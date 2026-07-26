@@ -27,6 +27,7 @@ class AppContainer(
     )
     val updateManager = UpdateManager(
         context = context,
+        applicationScope = applicationScope,
         releaseClient = GitHubReleaseClient(),
     )
 }

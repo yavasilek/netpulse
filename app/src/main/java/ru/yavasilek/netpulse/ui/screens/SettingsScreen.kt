@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
@@ -25,6 +26,7 @@ import ru.yavasilek.netpulse.settings.SpeedUnit
 import ru.yavasilek.netpulse.settings.StatusIconMode
 import ru.yavasilek.netpulse.ui.components.SettingsSwitch
 import ru.yavasilek.netpulse.update.UpdateState
+import ru.yavasilek.netpulse.util.FileSizeFormatter
 
 @Composable
 fun SettingsScreen(
@@ -220,11 +222,43 @@ private fun UpdateContent(
             UpdateState.Checking -> "Проверяем GitHub Releases…"
             is UpdateState.UpToDate -> "Установлена актуальная версия ${state.currentVersion}"
             is UpdateState.Available -> "Доступна версия ${state.release.versionName}"
-            is UpdateState.Downloading -> "Загружается версия ${state.release.versionName}"
+            is UpdateState.Preparing -> "Подготавливаем загрузку версии ${state.versionName}…"
+            is UpdateState.Downloading -> if (state.isPaused) {
+                "Загрузка версии ${state.versionName} приостановлена системой"
+            } else {
+                val percent = state.percent?.let { "$it%" } ?: "идёт"
+                "Загрузка версии ${state.versionName}: $percent"
+            }
+            is UpdateState.Verifying -> "Проверяем APK версии ${state.versionName}…"
             is UpdateState.ReadyToInstall -> "Версия ${state.versionName} готова к установке"
             is UpdateState.Error -> state.message
         }
         Text(text, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        when (state) {
+            UpdateState.Checking,
+            is UpdateState.Preparing,
+            is UpdateState.Verifying,
+            -> LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            is UpdateState.Downloading -> {
+                val progress = state.progressFraction
+                if (progress == null) {
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                } else {
+                    LinearProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                val downloaded = FileSizeFormatter.format(state.downloadedBytes)
+                val total = state.totalBytes?.let(FileSizeFormatter::format)
+                Text(
+                    text = if (total == null) downloaded else "$downloaded из $total",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            else -> Unit
+        }
         when (state) {
             is UpdateState.Available -> Button(onClick = { onDownload(state.release) }) {
                 Text("Скачать APK")
@@ -233,7 +267,9 @@ private fun UpdateContent(
                 Text("Установить")
             }
             UpdateState.Checking,
+            is UpdateState.Preparing,
             is UpdateState.Downloading,
+            is UpdateState.Verifying,
             -> Unit
             else -> Button(onClick = onCheck) {
                 Text("Проверить обновление")
