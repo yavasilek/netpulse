@@ -56,6 +56,7 @@ fun SettingsScreen(
     onDynamicColorChange: (Boolean) -> Unit,
     onLockScreenDetailsChange: (Boolean) -> Unit,
     onRequireVpnForProtectionChange: (Boolean) -> Unit,
+    onOpenStatusIndicatorSettings: () -> Unit,
     onOpenBatterySettings: () -> Unit,
     onOpenVpnSettings: () -> Unit,
     onCheckUpdates: () -> Unit,
@@ -237,6 +238,21 @@ fun SettingsScreen(
                         onClick = { onStatusIconModeChange(mode) },
                     )
                 }
+                OutlinedButton(
+                    onClick = onOpenStatusIndicatorSettings,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                ) {
+                    Text("Настройки индикатора Android")
+                }
+                Text(
+                    text = "Канал настроен без звука и вибрации, но с показом числовой " +
+                        "скорости в верхней строке.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
+                )
             }
         }
 

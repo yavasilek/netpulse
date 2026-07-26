@@ -21,6 +21,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ru.yavasilek.netpulse.monitoring.MonitoringController
+import ru.yavasilek.netpulse.monitoring.MonitorNotificationFactory
 import ru.yavasilek.netpulse.diagnostics.DiagnosticReportBuilder
 import ru.yavasilek.netpulse.ui.NetPulseApp
 import ru.yavasilek.netpulse.ui.NetPulseViewModel
@@ -121,6 +122,7 @@ class MainActivity : ComponentActivity() {
                     onLockScreenDetailsChange =
                         viewModel::setShowNetworkDetailsOnLockScreen,
                     onRequireVpnForProtectionChange = viewModel::setRequireVpnForProtection,
+                    onOpenStatusIndicatorSettings = ::openStatusIndicatorSettings,
                     onOpenBatterySettings = ::openBatterySettings,
                     onOpenVpnSettings = ::openVpnSettings,
                     onTrustCurrentExit = viewModel::trustCurrentExit,
@@ -182,6 +184,25 @@ class MainActivity : ComponentActivity() {
 
     private fun openBatterySettings() {
         openSystemSettings(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+    }
+
+    private fun openStatusIndicatorSettings() {
+        MonitorNotificationFactory(this).ensureChannels()
+        try {
+            startActivity(
+                Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
+                    .putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                    .putExtra(
+                        Settings.EXTRA_CHANNEL_ID,
+                        MonitorNotificationFactory.MONITOR_CHANNEL_ID,
+                    ),
+            )
+        } catch (_: ActivityNotFoundException) {
+            startActivity(
+                Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                    .putExtra(Settings.EXTRA_APP_PACKAGE, packageName),
+            )
+        }
     }
 
     private fun openVpnSettings() {

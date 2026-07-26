@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.Icon
+import android.os.Build
 import androidx.core.content.ContextCompat
 import ru.yavasilek.netpulse.MainActivity
 import ru.yavasilek.netpulse.R
@@ -30,10 +31,13 @@ class MonitorNotificationFactory(
                 NotificationChannel(
                     MONITOR_CHANNEL_ID,
                     context.getString(R.string.notification_channel_monitor_name),
-                    NotificationManager.IMPORTANCE_LOW,
+                    NotificationManager.IMPORTANCE_DEFAULT,
                 ).apply {
                     description =
                         context.getString(R.string.notification_channel_monitor_description)
+                    setSound(null, null)
+                    enableVibration(false)
+                    enableLights(false)
                     setShowBadge(false)
                     lockscreenVisibility = Notification.VISIBILITY_PRIVATE
                 },
@@ -120,17 +124,23 @@ class MonitorNotificationFactory(
             .addAction(action(ACTION_REFRESH, R.string.notification_action_refresh))
             .addAction(action(ACTION_COPY, R.string.notification_action_copy))
             .addAction(action(ACTION_STOP, R.string.notification_action_pause))
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            builder.setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE)
+        }
         if (!settings.showNetworkDetailsOnLockScreen) {
-            builder.setPublicVersion(
-                Notification.Builder(context, MONITOR_CHANNEL_ID)
+            val publicBuilder = Notification.Builder(context, MONITOR_CHANNEL_ID)
                     .setSmallIcon(iconRenderer.render(snapshot.speed, settings))
                     .setContentTitle("↓ $download · ↑ $upload")
                     .setContentText("NetPulse работает")
                     .setOngoing(true)
                     .setShowWhen(false)
                     .setCategory(Notification.CATEGORY_STATUS)
-                    .build(),
-            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                publicBuilder.setForegroundServiceBehavior(
+                    Notification.FOREGROUND_SERVICE_IMMEDIATE,
+                )
+            }
+            builder.setPublicVersion(publicBuilder.build())
         }
         return builder.build()
     }
@@ -208,7 +218,7 @@ class MonitorNotificationFactory(
         }
 
     companion object {
-        const val MONITOR_CHANNEL_ID = "network_monitor"
+        const val MONITOR_CHANNEL_ID = "status_speed_v2"
         const val ALERTS_CHANNEL_ID = "network_alerts"
         const val ACTION_REFRESH = "ru.yavasilek.netpulse.action.REFRESH_IP"
         const val ACTION_COPY = "ru.yavasilek.netpulse.action.COPY_IP"

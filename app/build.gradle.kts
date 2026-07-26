@@ -9,10 +9,10 @@ plugins {
 val githubRepository = providers.gradleProperty("NETPULSE_GITHUB_REPOSITORY")
     .orElse("yavasilek/netpulse")
 val appVersionName = providers.environmentVariable("NETPULSE_VERSION_NAME")
-    .orElse("0.3.0")
+    .orElse("0.3.1")
 val appVersionCode = providers.environmentVariable("NETPULSE_VERSION_CODE")
     .map(String::toInt)
-    .orElse(7)
+    .orElse(8)
 
 val releaseStoreFile = providers.environmentVariable("NETPULSE_KEYSTORE_FILE").orNull
 val releaseStorePassword = providers.environmentVariable("NETPULSE_KEYSTORE_PASSWORD").orNull
