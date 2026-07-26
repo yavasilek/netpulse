@@ -1,27 +1,19 @@
 package ru.yavasilek.netpulse.monitoring
 
-import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.graphics.drawable.Icon
 import androidx.core.graphics.createBitmap
-import ru.yavasilek.netpulse.R
 import ru.yavasilek.netpulse.model.SpeedSample
 import ru.yavasilek.netpulse.settings.AppSettings
 import ru.yavasilek.netpulse.settings.StatusIconMode
 import ru.yavasilek.netpulse.util.SpeedFormatter
 import kotlin.math.max
 
-class StatusIconRenderer(
-    private val context: Context,
-) {
+class StatusIconRenderer {
     fun render(speed: SpeedSample, settings: AppSettings): Icon {
-        if (settings.statusIconMode == StatusIconMode.STATIC) {
-            return Icon.createWithResource(context, R.drawable.ic_notification)
-        }
-
         val bytes = when (settings.statusIconMode) {
             StatusIconMode.DOWNLOAD -> speed.receivedBytesPerSecond
             StatusIconMode.UPLOAD -> speed.transmittedBytesPerSecond
@@ -29,7 +21,6 @@ class StatusIconRenderer(
                 speed.receivedBytesPerSecond,
                 speed.transmittedBytesPerSecond,
             )
-            StatusIconMode.STATIC -> 0
         }
         val text = SpeedFormatter.formatStatusIcon(bytes, settings.speedUnit)
         return Icon.createWithBitmap(draw(text))
