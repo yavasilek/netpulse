@@ -25,6 +25,10 @@ class SettingsRepository(
         val warnWhenIpChanges = booleanPreferencesKey("warn_when_ip_changes")
         val automaticUpdateChecks = booleanPreferencesKey("automatic_update_checks")
         val dynamicColor = booleanPreferencesKey("dynamic_color")
+        val requireVpnForProtection = booleanPreferencesKey("require_vpn_for_protection")
+        val trustedExitCountryCode = stringPreferencesKey("trusted_exit_country_code")
+        val trustedExitCountryName = stringPreferencesKey("trusted_exit_country_name")
+        val trustedExitAsnOrganization = stringPreferencesKey("trusted_exit_asn_organization")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data
@@ -49,6 +53,14 @@ class SettingsRepository(
                 warnWhenIpChanges = preferences[Keys.warnWhenIpChanges] ?: false,
                 automaticUpdateChecks = preferences[Keys.automaticUpdateChecks] ?: true,
                 dynamicColor = preferences[Keys.dynamicColor] ?: true,
+                requireVpnForProtection = preferences[Keys.requireVpnForProtection] ?: true,
+                trustedExitProfile = preferences[Keys.trustedExitCountryCode]?.let { countryCode ->
+                    TrustedExitProfile(
+                        countryCode = countryCode,
+                        countryName = preferences[Keys.trustedExitCountryName],
+                        asnOrganization = preferences[Keys.trustedExitAsnOrganization],
+                    )
+                },
             )
         }
 
@@ -72,6 +84,27 @@ class SettingsRepository(
         edit(Keys.automaticUpdateChecks, value)
 
     suspend fun setDynamicColor(value: Boolean) = edit(Keys.dynamicColor, value)
+
+    suspend fun setRequireVpnForProtection(value: Boolean) =
+        edit(Keys.requireVpnForProtection, value)
+
+    suspend fun setTrustedExitProfile(profile: TrustedExitProfile?) {
+        context.dataStore.edit { preferences ->
+            if (profile == null) {
+                preferences.remove(Keys.trustedExitCountryCode)
+                preferences.remove(Keys.trustedExitCountryName)
+                preferences.remove(Keys.trustedExitAsnOrganization)
+            } else {
+                preferences[Keys.trustedExitCountryCode] = profile.countryCode
+                profile.countryName?.let {
+                    preferences[Keys.trustedExitCountryName] = it
+                } ?: preferences.remove(Keys.trustedExitCountryName)
+                profile.asnOrganization?.let {
+                    preferences[Keys.trustedExitAsnOrganization] = it
+                } ?: preferences.remove(Keys.trustedExitAsnOrganization)
+            }
+        }
+    }
 
     private suspend fun <T> edit(key: androidx.datastore.preferences.core.Preferences.Key<T>, value: T) {
         context.dataStore.edit { preferences ->
