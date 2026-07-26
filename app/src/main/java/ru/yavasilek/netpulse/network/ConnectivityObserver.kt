@@ -49,10 +49,15 @@ class ConnectivityObserver(
         }
 
         override fun onLost(network: Network) {
-            _connection.value = ConnectionInfo(
-                status = ConnectionStatus.OFFLINE,
-                changedAtMillis = System.currentTimeMillis(),
-            )
+            val activeNetwork = connectivityManager.activeNetwork
+            if (activeNetwork == null || activeNetwork == network) {
+                _connection.value = ConnectionInfo(
+                    status = ConnectionStatus.OFFLINE,
+                    changedAtMillis = System.currentTimeMillis(),
+                )
+            } else {
+                publish(activeNetwork)
+            }
         }
     }
 
