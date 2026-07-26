@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-labelledby="title description">
+  <title id="title">NetPulse</title>
+  <desc id="description">Белая линия пульса на зелёном круге</desc>
+  <circle cx="80" cy="80" r="72" fill="#0F5C43"/>
+  <path
+    d="M28 82h31l10-28 22 62 13-34h28"
+    fill="none"
+    stroke="#FFFFFF"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="12"
+  />
+</svg>

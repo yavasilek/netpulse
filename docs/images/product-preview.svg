@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 680" role="img" aria-labelledby="title description">
+  <title id="title">Интерфейс NetPulse</title>
+  <desc id="description">Экран Пульс и развёрнутое сетевое уведомление</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#EAF6F0"/>
+      <stop offset="1" stop-color="#EEF0FC"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#25332D" flood-opacity=".15"/>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="680" rx="42" fill="url(#background)"/>
+  <circle cx="1110" cy="90" r="150" fill="#5366D9" opacity=".07"/>
+  <circle cx="90" cy="620" r="180" fill="#176B50" opacity=".08"/>
+
+  <g filter="url(#shadow)">
+    <rect x="80" y="38" width="390" height="604" rx="48" fill="#F9FAFC"/>
+  </g>
+  <rect x="220" y="54" width="110" height="12" rx="6" fill="#D8DCE2"/>
+  <text x="116" y="115" fill="#171A1F" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="34" font-weight="700">NetPulse</text>
+  <circle cx="118" cy="158" r="8" fill="#176B50"/>
+  <text x="140" y="168" fill="#171A1F" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="24" font-weight="700">Интернет работает</text>
+
+  <rect x="108" y="200" width="158" height="122" rx="24" fill="#F1F3F8"/>
+  <text x="130" y="236" fill="#59606A" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17">Входящая</text>
+  <text x="130" y="280" fill="#171A1F" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="37" font-weight="700">12.4</text>
+  <text x="130" y="307" fill="#59606A" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17">Мбит/с</text>
+
+  <rect x="282" y="200" width="158" height="122" rx="24" fill="#F1F3F8"/>
+  <text x="304" y="236" fill="#59606A" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17">Исходящая</text>
+  <text x="304" y="280" fill="#171A1F" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="37" font-weight="700">1.08</text>
+  <text x="304" y="307" fill="#59606A" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17">Мбит/с</text>
+
+  <path d="M110 400 L145 393 L180 348 L214 380 L248 366 L282 391 L316 352 L350 384 L392 378 L438 396"
+        fill="none" stroke="#5366D9" stroke-linecap="round" stroke-linejoin="round" stroke-width="7"/>
+  <path d="M110 405 L145 397 L180 401 L214 386 L248 399 L282 395 L316 401 L350 399 L392 403 L438 402"
+        fill="none" stroke="#59606A" stroke-linecap="round" stroke-linejoin="round" stroke-width="5"/>
+  <line x1="110" y1="405" x2="438" y2="405" stroke="#CDD1D8" stroke-width="2"/>
+
+  <rect x="108" y="438" width="332" height="132" rx="24" fill="#F1F3F8"/>
+  <text x="132" y="478" fill="#59606A" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="18">VPN</text>
+  <text x="284" y="478" fill="#171A1F" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="18" font-weight="700">Подключён</text>
+  <text x="132" y="518" fill="#59606A" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="18">IPv4</text>
+  <text x="284" y="518" fill="#171A1F" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="18" font-weight="700">203.0.113.42</text>
+  <text x="132" y="558" fill="#59606A" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="18">Подключение</text>
+  <text x="284" y="558" fill="#171A1F" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="18" font-weight="700">Wi‑Fi + VPN</text>
+
+  <g filter="url(#shadow)">
+    <rect x="520" y="110" width="600" height="460" rx="42" fill="#FFFFFF"/>
+  </g>
+  <rect x="550" y="142" width="68" height="68" rx="34" fill="#0F5C43"/>
+  <text x="584" y="183" fill="#FFFFFF" text-anchor="middle" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="18" font-weight="800">12M</text>
+  <text x="646" y="169" fill="#171A1F" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="22" font-weight="700">↓ 12.4 Мбит/с · ↑ 1.08 Мбит/с</text>
+  <text x="646" y="202" fill="#59606A" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="18">Интернет работает · VPN · Финляндия</text>
+
+  <line x1="550" y1="238" x2="1090" y2="238" stroke="#E6E8EC" stroke-width="2"/>
+  <text x="570" y="285" fill="#171A1F" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="20" font-weight="700">Точка выхода защищена</text>
+  <text x="570" y="327" fill="#59606A" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19">Wi‑Fi + VPN</text>
+  <text x="570" y="365" fill="#59606A" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19">IPv4: 203.0.113.42</text>
+  <text x="570" y="403" fill="#59606A" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19">IPv6: не обнаружен</text>
+
+  <line x1="550" y1="436" x2="1090" y2="436" stroke="#E6E8EC" stroke-width="2"/>
+  <text x="570" y="493" fill="#5366D9" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" font-weight="700">Обновить IP</text>
+  <text x="770" y="493" fill="#5366D9" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" font-weight="700">Копировать</text>
+  <text x="965" y="493" fill="#5366D9" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" font-weight="700">Пауза</text>
+
+  <rect x="548" y="603" width="572" height="35" rx="17.5" fill="#17201C" opacity=".9"/>
+  <text x="575" y="627" fill="#FFFFFF" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16">12M</text>
+  <text x="650" y="627" fill="#CFD7D2" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16">скорость всегда видна в статус-баре</text>
+</svg>

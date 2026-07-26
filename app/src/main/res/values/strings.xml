@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">NetPulse</string>
+    <string name="tile_label">NetPulse</string>
+    <string name="notification_channel_monitor_name">Мониторинг сети</string>
+    <string name="notification_channel_monitor_description">Постоянная скорость, интернет, VPN и внешний IP</string>
+    <string name="notification_channel_alerts_name">Сетевые предупреждения</string>
+    <string name="notification_channel_alerts_description">Изменения VPN, IP и доступности интернета</string>
+    <string name="notification_action_refresh">Обновить</string>
+    <string name="notification_action_copy">Копировать</string>
+    <string name="notification_action_pause">Пауза</string>
+</resources>
