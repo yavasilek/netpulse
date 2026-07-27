@@ -26,7 +26,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -86,8 +85,7 @@ class UpdateManager(
                     UpdateState.Error(error.message ?: "Не удалось проверить обновление")
                 },
             )
-        _state.update { current -> UpdateStatePolicy.afterCheck(current, result) }
-        val published = _state.value
+        val published = _state.publishCheckResult(result)
         if (result !is UpdateState.Error) {
             checkPreferences.edit {
                 putLong(KEY_LAST_SUCCESSFUL_CHECK, System.currentTimeMillis())

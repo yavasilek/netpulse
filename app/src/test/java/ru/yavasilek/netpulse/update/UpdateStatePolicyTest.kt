@@ -2,8 +2,9 @@ package ru.yavasilek.netpulse.update
 
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -35,6 +36,26 @@ class UpdateStatePolicyTest {
         val published = publishLateCheckWhile(ready)
 
         assertEquals(ready, published)
+    }
+
+    @Test
+    fun availablePublishedByCheckIsReturnedWhenAnotherCheckStarts() {
+        val available = UpdateState.Available(release())
+
+        val (returned, current) = publishWhileObserverReplacesWithChecking(available)
+
+        assertEquals(available, returned)
+        assertEquals(UpdateState.Checking, current)
+    }
+
+    @Test
+    fun errorPublishedByCheckIsReturnedWhenAnotherCheckStarts() {
+        val error = UpdateState.Error("GitHub unavailable")
+
+        val (returned, current) = publishWhileObserverReplacesWithChecking(error)
+
+        assertEquals(error, returned)
+        assertEquals(UpdateState.Checking, current)
     }
 
     @Test
@@ -77,15 +98,34 @@ class UpdateStatePolicyTest {
     private fun publishLateCheckWhile(current: UpdateState): UpdateState = runBlocking {
         val state = MutableStateFlow<UpdateState>(UpdateState.Checking)
         val checkResponse = CompletableDeferred<UpdateState>()
+        val published = CompletableDeferred<UpdateState>()
         val checkJob = launch(start = CoroutineStart.UNDISPATCHED) {
             val result = checkResponse.await()
-            state.update { latest -> UpdateStatePolicy.afterCheck(latest, result) }
+            published.complete(state.publishCheckResult(result))
         }
 
         state.value = current
         checkResponse.complete(UpdateState.Available(release()))
         checkJob.join()
 
-        state.value
+        published.await()
+    }
+
+    private fun publishWhileObserverReplacesWithChecking(
+        result: UpdateState,
+    ): Pair<UpdateState, UpdateState> = runBlocking {
+        val state = MutableStateFlow<UpdateState>(UpdateState.Checking)
+        val replaced = CompletableDeferred<Unit>()
+        val replacementJob = launch(Dispatchers.Unconfined) {
+            state.first { it == result }
+            state.value = UpdateState.Checking
+            replaced.complete(Unit)
+        }
+
+        val returned = state.publishCheckResult(result)
+        replaced.await()
+        replacementJob.join()
+
+        returned to state.value
     }
 }
