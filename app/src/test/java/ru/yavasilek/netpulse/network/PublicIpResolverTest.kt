@@ -1,6 +1,7 @@
 package ru.yavasilek.netpulse.network
 
 import java.io.IOException
+import java.net.SocketTimeoutException
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -70,5 +71,34 @@ class PublicIpResolverTest {
         assertNull(result.ipv4)
         assertEquals("2001:db8::42", result.ipv6?.address)
         assertEquals("DE", result.countryCode)
+    }
+
+    @Test
+    fun keepsResolvedIpv6WhenGeolocationTimesOut() = runBlocking {
+        val resolver = PublicIpResolver(
+            requester = { url, _ ->
+                when {
+                    "ipinfo.io" in url -> "{}"
+                    "api6.ipify.org" in url -> "2001:db8::42"
+                    "api.country.is" in url ->
+                        throw SocketTimeoutException("Geolocation timed out")
+                    else -> error("Unexpected URL: $url")
+                }
+            },
+            currentIpParser = {
+                CurrentIpDetails(
+                    address = "203.0.113.42",
+                    countryCode = "NL",
+                    asnOrganization = "Example VPN",
+                )
+            },
+        )
+
+        val result = resolver.resolve()
+
+        assertEquals("2001:db8::42", result.ipv6?.address)
+        assertNull(result.ipv6?.countryCode)
+        assertNull(result.ipv6?.countryName)
+        assertNull(result.ipv6?.asnOrganization)
     }
 }

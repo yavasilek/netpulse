@@ -263,6 +263,10 @@ class MonitorRepository(
                     requestSequence != ipRefreshSequence ||
                     !_state.value.connection.status.canResolvePublicIp()
                 ) {
+                    finishPublicIpRefresh(
+                        requestSequence = requestSequence,
+                        clearRefreshing = true,
+                    )
                     return@launch
                 }
 
@@ -317,10 +321,29 @@ class MonitorRepository(
                     }
                 }
 
-                synchronized(ipRefreshLock) {
-                    if (requestSequence == ipRefreshSequence) {
-                        ipRefreshJob = null
-                    }
+                finishPublicIpRefresh(
+                    requestSequence = requestSequence,
+                    clearRefreshing = false,
+                )
+            }
+        }
+    }
+
+    private fun finishPublicIpRefresh(
+        requestSequence: Long,
+        clearRefreshing: Boolean,
+    ) {
+        synchronized(ipRefreshLock) {
+            if (requestSequence != ipRefreshSequence) return
+            ipRefreshJob = null
+            if (clearRefreshing) {
+                _state.update { current ->
+                    current.copy(
+                        publicIp = current.publicIp.afterRefreshAborted(
+                            requestSequence = requestSequence,
+                            activeSequence = ipRefreshSequence,
+                        ),
+                    )
                 }
             }
         }
@@ -359,9 +382,10 @@ class MonitorRepository(
             )
         }
 
-        val networkChanged = previous == null ||
-            previous.interfaceName != connection.interfaceName ||
-            previous.transports != connection.transports
+        val networkChanged = NetworkTransitionPolicy.hasNetworkChanged(
+            previous = previous,
+            current = connection,
+        )
         val becameOnline =
             previous?.status != ConnectionStatus.ONLINE &&
                 connection.status == ConnectionStatus.ONLINE
