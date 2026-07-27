@@ -57,16 +57,8 @@ class UpdateManager(
     }
 
     suspend fun check(): UpdateState {
-        val current = _state.value
-        if (
-            current is UpdateState.Preparing ||
-            current is UpdateState.Downloading ||
-            current is UpdateState.Verifying ||
-            current is UpdateState.ReadyToInstall
-        ) {
-            return current
-        }
-        _state.value = UpdateState.Checking
+        val checkStart = _state.startCheckIfAllowed()
+        if (checkStart != UpdateState.Checking) return checkStart
         val result = runCatching { releaseClient.latestRelease() }
             .fold(
                 onSuccess = { release ->
@@ -107,20 +99,13 @@ class UpdateManager(
     }
 
     fun download(release: ReleaseInfo) {
-        if (
-            _state.value is UpdateState.Preparing ||
-            _state.value is UpdateState.Downloading ||
-            _state.value is UpdateState.Verifying
-        ) {
-            return
-        }
+        if (!_state.tryStartDownload(release.versionName)) return
         if (BuildConfig.DEBUG) {
             _state.value = UpdateState.Error(
                 "Установка обновлений проверяется в подписанной release-сборке",
             )
             return
         }
-        _state.value = UpdateState.Preparing(release.versionName)
         try {
             val downloadDirectory =
                 requireNotNull(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS))

@@ -3,6 +3,8 @@ package ru.yavasilek.netpulse.update
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -56,6 +58,65 @@ class UpdateStatePolicyTest {
 
         assertEquals(error, returned)
         assertEquals(UpdateState.Checking, current)
+    }
+
+    @Test
+    fun checkStartDoesNotOverwriteActiveDownloadState() {
+        val activeStates = listOf(
+            UpdateState.Preparing("0.4.0"),
+            UpdateState.Downloading(
+                versionName = "0.4.0",
+                downloadedBytes = 512,
+                totalBytes = 1_024,
+            ),
+            UpdateState.Verifying("0.4.0"),
+            UpdateState.ReadyToInstall(
+                versionName = "0.4.0",
+                filePath = "C:\\downloads\\NetPulse-0.4.0.apk",
+            ),
+        )
+
+        activeStates.forEach { active ->
+            val state = MutableStateFlow<UpdateState>(active)
+
+            val returned = state.startCheckIfAllowed()
+
+            assertEquals(active, returned)
+            assertEquals(active, state.value)
+        }
+    }
+
+    @Test
+    fun onlyOneConcurrentDownloadStartWins() = runBlocking {
+        val state = MutableStateFlow<UpdateState>(
+            UpdateState.Available(release()),
+        )
+        val start = CompletableDeferred<Unit>()
+        val attempts = List(8) {
+            async(Dispatchers.Default) {
+                start.await()
+                state.tryStartDownload("0.4.0")
+            }
+        }
+
+        start.complete(Unit)
+        val outcomes = attempts.awaitAll()
+
+        assertEquals(1, outcomes.count { it })
+        assertEquals(UpdateState.Preparing("0.4.0"), state.value)
+    }
+
+    @Test
+    fun checkCannotOverwriteWinningDownloadStart() {
+        val state = MutableStateFlow<UpdateState>(
+            UpdateState.Available(release()),
+        )
+
+        assertTrue(state.tryStartDownload("0.4.0"))
+        val returned = state.startCheckIfAllowed()
+
+        assertEquals(UpdateState.Preparing("0.4.0"), returned)
+        assertEquals(UpdateState.Preparing("0.4.0"), state.value)
     }
 
     @Test

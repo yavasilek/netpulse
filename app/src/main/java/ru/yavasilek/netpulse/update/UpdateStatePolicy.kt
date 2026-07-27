@@ -23,10 +23,16 @@ internal sealed interface UpdateRestorePlan {
 }
 
 internal object UpdateStatePolicy {
+    fun beforeCheck(current: UpdateState): UpdateState =
+        if (current.blocksCheckResult()) current else UpdateState.Checking
+
     fun afterCheck(
         current: UpdateState,
         result: UpdateState,
     ): UpdateState = if (current.blocksCheckResult()) current else result
+
+    fun canStartDownload(current: UpdateState): Boolean =
+        !current.blocksDownloadStart()
 
     fun restore(
         metadata: PendingUpdateMetadata,
@@ -72,4 +78,9 @@ internal object UpdateStatePolicy {
             this is UpdateState.Downloading ||
             this is UpdateState.Verifying ||
             this is UpdateState.ReadyToInstall
+
+    private fun UpdateState.blocksDownloadStart(): Boolean =
+        this is UpdateState.Preparing ||
+            this is UpdateState.Downloading ||
+            this is UpdateState.Verifying
 }
