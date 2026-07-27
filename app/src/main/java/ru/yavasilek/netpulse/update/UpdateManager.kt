@@ -26,6 +26,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -85,13 +86,14 @@ class UpdateManager(
                     UpdateState.Error(error.message ?: "Не удалось проверить обновление")
                 },
             )
-        _state.value = result
+        _state.update { current -> UpdateStatePolicy.afterCheck(current, result) }
+        val published = _state.value
         if (result !is UpdateState.Error) {
             checkPreferences.edit {
                 putLong(KEY_LAST_SUCCESSFUL_CHECK, System.currentTimeMillis())
             }
         }
-        return result
+        return published
     }
 
     suspend fun checkIfStale(
@@ -424,31 +426,26 @@ class UpdateManager(
     }
 
     private fun restoreState(): UpdateState {
-        val ready = preferences.getBoolean(KEY_READY, false)
-        val version = preferences.getString(KEY_VERSION, null)
-        val path = preferences.getString(KEY_FILE_PATH, null)
-        val downloadId = preferences.getLong(KEY_DOWNLOAD_ID, -1)
-        if (
-            version != null &&
-            !VersionComparator.isNewer(version, BuildConfig.VERSION_NAME)
-        ) {
-            if (downloadId >= 0) downloadManager.remove(downloadId)
-            path?.let { File(it).delete() }
-            preferences.edit(commit = true) { clear() }
-            return UpdateState.Idle
-        }
-        return when {
-            ready && version != null && path != null && File(path).isFile ->
-                UpdateState.ReadyToInstall(version, path)
-            downloadId >= 0 && version != null ->
-                UpdateState.Downloading(
-                    versionName = version,
-                    downloadedBytes = 0,
-                    totalBytes = preferences
-                        .getLong(KEY_TOTAL_BYTES, -1)
-                        .takeIf { it > 0 },
-                )
-            else -> UpdateState.Idle
+        val metadata = PendingUpdateMetadata(
+            ready = preferences.getBoolean(KEY_READY, false),
+            versionName = preferences.getString(KEY_VERSION, null),
+            filePath = preferences.getString(KEY_FILE_PATH, null),
+            downloadId = preferences.getLong(KEY_DOWNLOAD_ID, -1).takeIf { it >= 0 },
+            totalBytes = preferences.getLong(KEY_TOTAL_BYTES, -1).takeIf { it > 0 },
+        )
+        val plan = UpdateStatePolicy.restore(
+            metadata = metadata,
+            currentVersion = BuildConfig.VERSION_NAME,
+            fileExists = metadata.filePath?.let { File(it).isFile } == true,
+        )
+        return when (plan) {
+            is UpdateRestorePlan.Keep -> plan.state
+            is UpdateRestorePlan.Clear -> {
+                plan.downloadId?.let { downloadManager.remove(it) }
+                plan.filePath?.let { File(it).delete() }
+                preferences.edit(commit = true) { clear() }
+                plan.state
+            }
         }
     }
 
