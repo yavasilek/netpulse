@@ -46,19 +46,14 @@ import ru.yavasilek.netpulse.ui.theme.PulseGreenDark
 internal fun TrustedExitCard(
     snapshot: MonitorSnapshot,
     profile: TrustedExitProfile?,
-    trustedExitMatches: Boolean,
+    trustedExitVerified: Boolean,
+    canTrustCurrentExit: Boolean,
     vpnRequired: Boolean,
     darkTheme: Boolean,
     onTrustCurrentExit: () -> Unit,
     onClearTrustedExit: () -> Unit,
 ) {
-    val current = snapshot.publicIp.primary
     val waitingForVpn = vpnRequired && !snapshot.connection.isVpn
-    val canTrust = snapshot.connection.status == ConnectionStatus.ONLINE &&
-        !waitingForVpn &&
-        !snapshot.publicIp.isRefreshing &&
-        snapshot.publicIp.errorMessage == null &&
-        !current?.countryCode.isNullOrBlank()
     Card(Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -80,7 +75,7 @@ internal fun TrustedExitCard(
                 )
                 FilledTonalButton(
                     onClick = onTrustCurrentExit,
-                    enabled = canTrust,
+                    enabled = canTrustCurrentExit,
                 ) {
                     Text("Запомнить текущую")
                 }
@@ -92,7 +87,7 @@ internal fun TrustedExitCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                val verified = canTrust && trustedExitMatches
+                val verified = trustedExitVerified
                 Text(
                     text = when {
                         waitingForVpn -> "Подключите VPN для проверки эталона"
@@ -113,7 +108,7 @@ internal fun TrustedExitCard(
                 ) {
                     OutlinedButton(
                         onClick = onTrustCurrentExit,
-                        enabled = canTrust,
+                        enabled = canTrustCurrentExit,
                     ) {
                         Text("Обновить эталон")
                     }

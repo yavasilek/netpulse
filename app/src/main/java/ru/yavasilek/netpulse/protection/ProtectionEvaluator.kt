@@ -25,16 +25,37 @@ enum class ProtectionIssue {
     TRUSTED_PROVIDER_MISMATCH,
 }
 
+enum class ProtectionRouteState {
+    SAFE,
+    UNSAFE,
+    INCONCLUSIVE,
+}
+
 data class ProtectionAssessment(
     val status: ProtectionStatus,
     val issues: Set<ProtectionIssue>,
+    private val trustedExitConfigured: Boolean,
 ) {
-    val trustedExitMatches: Boolean
-        get() = issues.none {
-            it == ProtectionIssue.TRUSTED_EXIT_UNVERIFIED ||
-                it == ProtectionIssue.TRUSTED_COUNTRY_MISMATCH ||
-                it == ProtectionIssue.TRUSTED_PROVIDER_MISMATCH
+    val routeState: ProtectionRouteState
+        get() = when {
+            issues.any {
+                it == ProtectionIssue.INTERNET_CHECKING ||
+                    it == ProtectionIssue.CAPTIVE_PORTAL ||
+                    it == ProtectionIssue.OFFLINE ||
+                    it == ProtectionIssue.IP_REFRESHING ||
+                    it == ProtectionIssue.IP_UNAVAILABLE
+            } -> ProtectionRouteState.INCONCLUSIVE
+            issues.any {
+                it == ProtectionIssue.IPV6_COUNTRY_MISMATCH ||
+                    it == ProtectionIssue.TRUSTED_EXIT_UNVERIFIED ||
+                    it == ProtectionIssue.TRUSTED_COUNTRY_MISMATCH ||
+                    it == ProtectionIssue.TRUSTED_PROVIDER_MISMATCH
+            } -> ProtectionRouteState.UNSAFE
+            else -> ProtectionRouteState.SAFE
         }
+
+    val trustedExitVerified: Boolean
+        get() = trustedExitConfigured && status == ProtectionStatus.PROTECTED
 }
 
 object ProtectionEvaluator {
@@ -100,7 +121,11 @@ object ProtectionEvaluator {
             issues.isNotEmpty() -> ProtectionStatus.ATTENTION
             else -> ProtectionStatus.PROTECTED
         }
-        return ProtectionAssessment(status = status, issues = issues)
+        return ProtectionAssessment(
+            status = status,
+            issues = issues,
+            trustedExitConfigured = settings.trustedExitProfile != null,
+        )
     }
 }
 
