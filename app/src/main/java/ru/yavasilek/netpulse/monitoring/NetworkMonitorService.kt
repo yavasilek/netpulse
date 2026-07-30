@@ -26,7 +26,7 @@ class NetworkMonitorService : Service() {
     private lateinit var notificationFactory: MonitorNotificationFactory
     private lateinit var notificationManager: NotificationManager
     private var notificationJob: Job? = null
-    private var previousVpnState: Boolean? = null
+    private val vpnDisconnectAlertTracker = VpnDisconnectAlertTracker()
     private var previousPublicIp: String? = null
     private val protectionRouteTracker = ProtectionRouteTracker()
 
@@ -118,17 +118,27 @@ class NetworkMonitorService : Service() {
     }
 
     private fun maybeWarnAboutVpn(snapshot: MonitorSnapshot, settings: AppSettings) {
-        val current = snapshot.connection.isVpn
-        val previous = previousVpnState
-        previousVpnState = current
-        if (previous == true && !current && settings.warnWhenVpnDisconnects) {
-            notificationManager.notify(
-                VPN_ALERT_NOTIFICATION_ID,
-                notificationFactory.buildAlert(
-                    title = "VPN отключён",
-                    message = "Текущее соединение: ${snapshot.connection.transportLabel}",
-                ),
+        when (
+            vpnDisconnectAlertTracker.onConnectionChanged(
+                isVpn = snapshot.connection.isVpn,
+                warningEnabled = settings.warnWhenVpnDisconnects,
             )
+        ) {
+            VpnDisconnectAlertAction.SHOW -> {
+                notificationManager.notify(
+                    VPN_ALERT_NOTIFICATION_ID,
+                    notificationFactory.buildAlert(
+                        title = "VPN отключён",
+                        message = "Текущее соединение: ${snapshot.connection.transportLabel}",
+                    ),
+                )
+            }
+
+            VpnDisconnectAlertAction.CANCEL -> {
+                notificationManager.cancel(VPN_ALERT_NOTIFICATION_ID)
+            }
+
+            VpnDisconnectAlertAction.NONE -> Unit
         }
     }
 
