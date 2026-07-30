@@ -4,6 +4,7 @@ import android.os.Build
 import org.json.JSONObject
 import ru.yavasilek.netpulse.model.IpAddressInfo
 import ru.yavasilek.netpulse.model.PublicIpInfo
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.supervisorScope
@@ -75,11 +76,20 @@ class PublicIpResolver internal constructor(
             address,
             StandardCharsets.UTF_8.name(),
         )
-        val geoJson = requester(
-            "$COUNTRY_ENDPOINT$encodedAddress?fields=asn",
-            timeoutMillis,
-        )
-        val geoDetails = geoParser(geoJson)
+        val geoDetails = try {
+            val geoJson = requester(
+                "$COUNTRY_ENDPOINT$encodedAddress?fields=asn",
+                timeoutMillis,
+            )
+            geoParser(geoJson)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            GeoDetails(
+                countryCode = null,
+                asnOrganization = null,
+            )
+        }
         val countryCode = geoDetails.countryCode
 
         return IpAddressInfo(

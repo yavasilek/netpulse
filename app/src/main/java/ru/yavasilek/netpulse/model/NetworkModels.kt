@@ -22,6 +22,7 @@ data class ConnectionInfo(
     val status: ConnectionStatus = ConnectionStatus.CHECKING,
     val transports: Set<TransportType> = emptySet(),
     val interfaceName: String? = null,
+    val networkIdentity: Long? = null,
     val isMetered: Boolean = false,
     val changedAtMillis: Long = System.currentTimeMillis(),
 ) {

@@ -133,11 +133,13 @@ class ConnectivityObserver(
             status = status,
             transports = transports,
             interfaceName = linkProperties?.interfaceName,
+            networkIdentity = network.networkHandle,
             isMetered = connectivityManager.isActiveNetworkMetered,
             changedAtMillis = if (
                 previous.status == status &&
                 previous.transports == transports &&
-                previous.interfaceName == linkProperties?.interfaceName
+                previous.interfaceName == linkProperties?.interfaceName &&
+                previous.networkIdentity == network.networkHandle
             ) {
                 previous.changedAtMillis
             } else {
