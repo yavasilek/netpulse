@@ -1,6 +1,7 @@
 package ru.yavasilek.netpulse.protection
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import ru.yavasilek.netpulse.model.ConnectionInfo
@@ -58,6 +59,19 @@ class ProtectionEvaluatorTest {
 
         assertEquals(ProtectionStatus.ATTENTION, result.status)
         assertEquals(setOf(ProtectionIssue.IP_REFRESHING), result.issues)
+    }
+
+    @Test
+    fun doesNotVerifyTrustedExitWhenLookupFailedWithCachedAddress() {
+        val result = ProtectionEvaluator.evaluate(
+            healthySnapshot().copy(
+                publicIp = healthyPublicIp().copy(errorMessage = "lookup failed"),
+            ),
+            settingsWithTrustedExit(),
+        )
+
+        assertTrue(ProtectionIssue.IP_UNAVAILABLE in result.issues)
+        assertFalse(result.trustedExitVerified)
     }
 
     @Test

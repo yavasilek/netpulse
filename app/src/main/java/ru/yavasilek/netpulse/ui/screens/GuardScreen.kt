@@ -28,6 +28,8 @@ import androidx.compose.ui.unit.dp
 import ru.yavasilek.netpulse.model.ConnectionStatus
 import ru.yavasilek.netpulse.model.MonitorSnapshot
 import ru.yavasilek.netpulse.protection.ProtectionEvaluator
+import ru.yavasilek.netpulse.protection.TrustCurrentExitDecision
+import ru.yavasilek.netpulse.protection.TrustCurrentExitPolicy
 import ru.yavasilek.netpulse.settings.AppSettings
 import ru.yavasilek.netpulse.ui.components.DetailCard
 
@@ -41,6 +43,7 @@ fun GuardScreen(
     modifier: Modifier = Modifier,
 ) {
     val assessment = ProtectionEvaluator.evaluate(snapshot, settings)
+    val trustCurrentExitDecision = TrustCurrentExitPolicy.evaluate(snapshot, settings)
     val darkTheme = isSystemInDarkTheme()
     val palette = guardPalette(assessment.status, darkTheme)
     val refreshing = snapshot.publicIp.isRefreshing
@@ -175,20 +178,13 @@ fun GuardScreen(
                     darkTheme = darkTheme,
                 )
                 settings.trustedExitProfile?.let {
-                    val vpnRequirementMet =
-                        !settings.requireVpnForProtection || snapshot.connection.isVpn
-                    val trustedExitVerified =
-                        vpnRequirementMet &&
-                        !refreshing &&
-                        assessment.trustedExitMatches &&
-                        snapshot.publicIp.primary != null
                     ProtectionCheckRow(
-                        state = if (trustedExitVerified) {
+                        state = if (assessment.trustedExitVerified) {
                             CheckState.SUCCESS
                         } else {
                             CheckState.ATTENTION
                         },
-                        text = if (trustedExitVerified) {
+                        text = if (assessment.trustedExitVerified) {
                             "Точка выхода совпадает с доверенной"
                         } else {
                             "Точка выхода требует проверки"
@@ -203,7 +199,8 @@ fun GuardScreen(
             TrustedExitCard(
                 snapshot = snapshot,
                 profile = settings.trustedExitProfile,
-                trustedExitMatches = assessment.trustedExitMatches,
+                trustedExitVerified = assessment.trustedExitVerified,
+                canTrustCurrentExit = trustCurrentExitDecision is TrustCurrentExitDecision.Ready,
                 vpnRequired = settings.requireVpnForProtection,
                 darkTheme = darkTheme,
                 onTrustCurrentExit = onTrustCurrentExit,

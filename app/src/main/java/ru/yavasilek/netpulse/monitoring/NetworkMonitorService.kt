@@ -11,9 +11,7 @@ import android.os.IBinder
 import android.widget.Toast
 import ru.yavasilek.netpulse.appContainer
 import ru.yavasilek.netpulse.model.MonitorSnapshot
-import ru.yavasilek.netpulse.model.NetworkEventType
-import ru.yavasilek.netpulse.protection.ProtectionEvaluator
-import ru.yavasilek.netpulse.protection.ProtectionIssue
+import ru.yavasilek.netpulse.protection.ProtectionRouteTracker
 import ru.yavasilek.netpulse.settings.AppSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -30,7 +28,7 @@ class NetworkMonitorService : Service() {
     private var notificationJob: Job? = null
     private var previousVpnState: Boolean? = null
     private var previousPublicIp: String? = null
-    private var previousRouteSafe: Boolean? = null
+    private val protectionRouteTracker = ProtectionRouteTracker()
 
     override fun onCreate() {
         super.onCreate()
@@ -89,38 +87,17 @@ class NetworkMonitorService : Service() {
         snapshot: MonitorSnapshot,
         settings: AppSettings,
     ) {
-        if (snapshot.publicIp.isRefreshing || snapshot.publicIp.primary == null) return
-        val assessment = ProtectionEvaluator.evaluate(snapshot, settings)
-        val relevantIssues = setOf(
-            ProtectionIssue.IPV6_COUNTRY_MISMATCH,
-            ProtectionIssue.TRUSTED_COUNTRY_MISMATCH,
-            ProtectionIssue.TRUSTED_PROVIDER_MISMATCH,
-            ProtectionIssue.TRUSTED_EXIT_UNVERIFIED,
-        )
-        val currentSafe = assessment.issues.none(relevantIssues::contains)
-        val previous = previousRouteSafe
-        previousRouteSafe = currentSafe
-        if (previous != true || currentSafe) return
-
-        val message = when {
-            ProtectionIssue.IPV6_COUNTRY_MISMATCH in assessment.issues ->
-                "IPv4 и IPv6 выходят через разные страны"
-            ProtectionIssue.TRUSTED_COUNTRY_MISMATCH in assessment.issues ->
-                "Страна выхода отличается от доверенной"
-            ProtectionIssue.TRUSTED_PROVIDER_MISMATCH in assessment.issues ->
-                "Оператор выхода отличается от доверенного"
-            else -> "Не удалось подтвердить доверенную точку выхода"
-        }
+        val warning = protectionRouteTracker.onSnapshot(snapshot, settings) ?: return
         appContainer.eventStore.add(
-            type = NetworkEventType.WARNING,
-            title = "Профиль защиты изменился",
-            detail = message,
+            type = warning.type,
+            title = warning.title,
+            detail = warning.detail,
         )
         notificationManager.notify(
             PROTECTION_ALERT_NOTIFICATION_ID,
             notificationFactory.buildAlert(
                 title = "Проверьте защиту",
-                message = message,
+                message = warning.detail,
             ),
         )
     }
