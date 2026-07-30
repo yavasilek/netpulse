@@ -57,16 +57,8 @@ class UpdateManager(
     }
 
     suspend fun check(): UpdateState {
-        val current = _state.value
-        if (
-            current is UpdateState.Preparing ||
-            current is UpdateState.Downloading ||
-            current is UpdateState.Verifying ||
-            current is UpdateState.ReadyToInstall
-        ) {
-            return current
-        }
-        _state.value = UpdateState.Checking
+        val checkStart = _state.startCheckIfAllowed()
+        if (checkStart != UpdateState.Checking) return checkStart
         val result = runCatching { releaseClient.latestRelease() }
             .fold(
                 onSuccess = { release ->
@@ -85,13 +77,13 @@ class UpdateManager(
                     UpdateState.Error(error.message ?: "Не удалось проверить обновление")
                 },
             )
-        _state.value = result
+        val published = _state.publishCheckResult(result)
         if (result !is UpdateState.Error) {
             checkPreferences.edit {
                 putLong(KEY_LAST_SUCCESSFUL_CHECK, System.currentTimeMillis())
             }
         }
-        return result
+        return published
     }
 
     suspend fun checkIfStale(
@@ -107,20 +99,13 @@ class UpdateManager(
     }
 
     fun download(release: ReleaseInfo) {
-        if (
-            _state.value is UpdateState.Preparing ||
-            _state.value is UpdateState.Downloading ||
-            _state.value is UpdateState.Verifying
-        ) {
-            return
-        }
+        if (!_state.tryStartDownload(release.versionName)) return
         if (BuildConfig.DEBUG) {
             _state.value = UpdateState.Error(
                 "Установка обновлений проверяется в подписанной release-сборке",
             )
             return
         }
-        _state.value = UpdateState.Preparing(release.versionName)
         try {
             val downloadDirectory =
                 requireNotNull(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS))
@@ -424,31 +409,26 @@ class UpdateManager(
     }
 
     private fun restoreState(): UpdateState {
-        val ready = preferences.getBoolean(KEY_READY, false)
-        val version = preferences.getString(KEY_VERSION, null)
-        val path = preferences.getString(KEY_FILE_PATH, null)
-        val downloadId = preferences.getLong(KEY_DOWNLOAD_ID, -1)
-        if (
-            version != null &&
-            !VersionComparator.isNewer(version, BuildConfig.VERSION_NAME)
-        ) {
-            if (downloadId >= 0) downloadManager.remove(downloadId)
-            path?.let { File(it).delete() }
-            preferences.edit(commit = true) { clear() }
-            return UpdateState.Idle
-        }
-        return when {
-            ready && version != null && path != null && File(path).isFile ->
-                UpdateState.ReadyToInstall(version, path)
-            downloadId >= 0 && version != null ->
-                UpdateState.Downloading(
-                    versionName = version,
-                    downloadedBytes = 0,
-                    totalBytes = preferences
-                        .getLong(KEY_TOTAL_BYTES, -1)
-                        .takeIf { it > 0 },
-                )
-            else -> UpdateState.Idle
+        val metadata = PendingUpdateMetadata(
+            ready = preferences.getBoolean(KEY_READY, false),
+            versionName = preferences.getString(KEY_VERSION, null),
+            filePath = preferences.getString(KEY_FILE_PATH, null),
+            downloadId = preferences.getLong(KEY_DOWNLOAD_ID, -1).takeIf { it >= 0 },
+            totalBytes = preferences.getLong(KEY_TOTAL_BYTES, -1).takeIf { it > 0 },
+        )
+        val plan = UpdateStatePolicy.restore(
+            metadata = metadata,
+            currentVersion = BuildConfig.VERSION_NAME,
+            fileExists = metadata.filePath?.let { File(it).isFile } == true,
+        )
+        return when (plan) {
+            is UpdateRestorePlan.Keep -> plan.state
+            is UpdateRestorePlan.Clear -> {
+                plan.downloadId?.let { downloadManager.remove(it) }
+                plan.filePath?.let { File(it).delete() }
+                preferences.edit(commit = true) { clear() }
+                plan.state
+            }
         }
     }
 

@@ -6,6 +6,8 @@ import android.net.LinkProperties
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import ru.yavasilek.netpulse.model.ConnectionInfo
 import ru.yavasilek.netpulse.model.ConnectionStatus
 import ru.yavasilek.netpulse.model.TransportType
@@ -19,13 +21,21 @@ class ConnectivityObserver(
     private val connectivityManager =
         context.getSystemService(ConnectivityManager::class.java)
     private val _connection = MutableStateFlow(ConnectionInfo())
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    @Volatile
     private var started = false
 
     val connection: StateFlow<ConnectionInfo> = _connection.asStateFlow()
 
+    private val activeNetworkResync = Runnable {
+        if (started) publishActiveNetwork()
+    }
+
     private val callback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) {
             publish(network)
+            scheduleActiveNetworkResync()
         }
 
         override fun onCapabilitiesChanged(
@@ -36,6 +46,7 @@ class ConnectivityObserver(
                 network = network,
                 capabilities = networkCapabilities,
             )
+            scheduleActiveNetworkResync()
         }
 
         override fun onLinkPropertiesChanged(
@@ -46,6 +57,7 @@ class ConnectivityObserver(
                 network = network,
                 linkProperties = linkProperties,
             )
+            scheduleActiveNetworkResync()
         }
 
         override fun onLost(network: Network) {
@@ -58,6 +70,7 @@ class ConnectivityObserver(
             } else {
                 publish(activeNetwork)
             }
+            scheduleActiveNetworkResync()
         }
     }
 
@@ -72,6 +85,7 @@ class ConnectivityObserver(
         } else {
             publish(activeNetwork)
         }
+        scheduleActiveNetworkResync()
     }
 
     @Synchronized
@@ -79,6 +93,24 @@ class ConnectivityObserver(
         if (!started) return
         runCatching { connectivityManager.unregisterNetworkCallback(callback) }
         started = false
+        mainHandler.removeCallbacks(activeNetworkResync)
+    }
+
+    private fun scheduleActiveNetworkResync() {
+        mainHandler.removeCallbacks(activeNetworkResync)
+        mainHandler.postDelayed(activeNetworkResync, ACTIVE_NETWORK_RESYNC_DELAY)
+    }
+
+    private fun publishActiveNetwork() {
+        val activeNetwork = connectivityManager.activeNetwork
+        if (activeNetwork == null) {
+            _connection.value = ConnectionInfo(
+                status = ConnectionStatus.OFFLINE,
+                changedAtMillis = System.currentTimeMillis(),
+            )
+        } else {
+            publish(activeNetwork)
+        }
     }
 
     private fun publish(
@@ -133,11 +165,13 @@ class ConnectivityObserver(
             status = status,
             transports = transports,
             interfaceName = linkProperties?.interfaceName,
+            networkIdentity = network.networkHandle,
             isMetered = connectivityManager.isActiveNetworkMetered,
             changedAtMillis = if (
                 previous.status == status &&
                 previous.transports == transports &&
-                previous.interfaceName == linkProperties?.interfaceName
+                previous.interfaceName == linkProperties?.interfaceName &&
+                previous.networkIdentity == network.networkHandle
             ) {
                 previous.changedAtMillis
             } else {
@@ -145,5 +179,9 @@ class ConnectivityObserver(
             },
         )
         _connection.value = next
+    }
+
+    private companion object {
+        const val ACTIVE_NETWORK_RESYNC_DELAY = 750L
     }
 }

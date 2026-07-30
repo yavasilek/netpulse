@@ -1,6 +1,7 @@
 package ru.yavasilek.netpulse.ui
 
 import android.app.Application
+import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -9,10 +10,11 @@ import ru.yavasilek.netpulse.AppContainer
 import ru.yavasilek.netpulse.model.MonitorSnapshot
 import ru.yavasilek.netpulse.model.NetworkEvent
 import ru.yavasilek.netpulse.monitoring.MonitoringController
+import ru.yavasilek.netpulse.protection.TrustCurrentExitRejection
+import ru.yavasilek.netpulse.protection.TrustCurrentExitResult
 import ru.yavasilek.netpulse.settings.AppSettings
 import ru.yavasilek.netpulse.settings.SpeedUnit
 import ru.yavasilek.netpulse.settings.StatusIconMode
-import ru.yavasilek.netpulse.settings.TrustedExitProfile
 import ru.yavasilek.netpulse.update.ReleaseInfo
 import ru.yavasilek.netpulse.update.UpdateScheduler
 import ru.yavasilek.netpulse.update.UpdateState
@@ -21,7 +23,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.util.Locale
 
 data class NetPulseUiState(
     val monitor: MonitorSnapshot = MonitorSnapshot(),
@@ -131,16 +132,12 @@ class NetPulseViewModel(
     }
 
     fun trustCurrentExit() {
-        val current = uiState.value.monitor.publicIp.primary ?: return
-        val countryCode = current.countryCode ?: return
         viewModelScope.launch {
-            container.settingsRepository.setTrustedExitProfile(
-                TrustedExitProfile(
-                    countryCode = countryCode.uppercase(Locale.ROOT),
-                    countryName = current.countryName,
-                    asnOrganization = current.asnOrganization,
-                ),
-            )
+            val message = when (val result = container.trustCurrentExitUseCase.save()) {
+                is TrustCurrentExitResult.Saved -> "Доверенная точка сохранена"
+                is TrustCurrentExitResult.Rejected -> result.reason.message()
+            }
+            Toast.makeText(getApplication(), message, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -183,4 +180,21 @@ class NetPulseViewModel(
             return NetPulseViewModel(application, container) as T
         }
     }
+}
+
+private fun TrustCurrentExitRejection.message(): String = when (this) {
+    TrustCurrentExitRejection.INTERNET_NOT_VALIDATED ->
+        "Дождитесь подтверждённого подключения к интернету"
+    TrustCurrentExitRejection.VPN_REQUIRED ->
+        "Подключите VPN перед сохранением доверенной точки"
+    TrustCurrentExitRejection.IP_REFRESHING ->
+        "Дождитесь завершения обновления IP"
+    TrustCurrentExitRejection.IP_LOOKUP_FAILED ->
+        "Не удалось проверить публичный IP — повторите попытку"
+    TrustCurrentExitRejection.IP_UNAVAILABLE ->
+        "Публичный IP ещё не определён"
+    TrustCurrentExitRejection.IPV6_ROUTE_MISMATCH ->
+        "Маршруты IPv4 и IPv6 не совпадают"
+    TrustCurrentExitRejection.COUNTRY_UNAVAILABLE ->
+        "Не удалось определить страну точки выхода"
 }

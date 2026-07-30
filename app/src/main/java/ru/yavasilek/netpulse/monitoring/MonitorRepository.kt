@@ -263,6 +263,10 @@ class MonitorRepository(
                     requestSequence != ipRefreshSequence ||
                     !_state.value.connection.status.canResolvePublicIp()
                 ) {
+                    finishPublicIpRefresh(
+                        requestSequence = requestSequence,
+                        clearRefreshing = true,
+                    )
                     return@launch
                 }
 
@@ -283,27 +287,12 @@ class MonitorRepository(
                 if (requestSequence != ipRefreshSequence) return@launch
 
                 resolved.onSuccess { publicIp ->
-                    val oldAddress = before.primary?.address
-                    val newAddress = publicIp.primary?.address
                     _state.update { it.copy(publicIp = publicIp) }
-                    if (oldAddress != null && newAddress != null && oldAddress != newAddress) {
+                    PublicIpRefreshEventFactory.create(before, publicIp).forEach { event ->
                         eventStore.add(
-                            type = NetworkEventType.IP,
-                            title = "Публичный IP изменился",
-                            detail = "$oldAddress → $newAddress",
-                        )
-                    } else if (oldAddress == null && newAddress != null) {
-                        eventStore.add(
-                            type = NetworkEventType.IP,
-                            title = "Публичный IP определён",
-                            detail = newAddress,
-                        )
-                    }
-                    if (publicIp.hasPossibleIpv6Leak) {
-                        eventStore.add(
-                            type = NetworkEventType.WARNING,
-                            title = "Возможна IPv6-утечка",
-                            detail = "IPv4 и IPv6 выходят через разные страны",
+                            type = event.type,
+                            title = event.title,
+                            detail = event.detail,
                         )
                     }
                 }.onFailure {
@@ -317,10 +306,29 @@ class MonitorRepository(
                     }
                 }
 
-                synchronized(ipRefreshLock) {
-                    if (requestSequence == ipRefreshSequence) {
-                        ipRefreshJob = null
-                    }
+                finishPublicIpRefresh(
+                    requestSequence = requestSequence,
+                    clearRefreshing = false,
+                )
+            }
+        }
+    }
+
+    private fun finishPublicIpRefresh(
+        requestSequence: Long,
+        clearRefreshing: Boolean,
+    ) {
+        synchronized(ipRefreshLock) {
+            if (requestSequence != ipRefreshSequence) return
+            ipRefreshJob = null
+            if (clearRefreshing) {
+                _state.update { current ->
+                    current.copy(
+                        publicIp = current.publicIp.afterRefreshAborted(
+                            requestSequence = requestSequence,
+                            activeSequence = ipRefreshSequence,
+                        ),
+                    )
                 }
             }
         }
@@ -359,9 +367,10 @@ class MonitorRepository(
             )
         }
 
-        val networkChanged = previous == null ||
-            previous.interfaceName != connection.interfaceName ||
-            previous.transports != connection.transports
+        val networkChanged = NetworkTransitionPolicy.hasNetworkChanged(
+            previous = previous,
+            current = connection,
+        )
         val becameOnline =
             previous?.status != ConnectionStatus.ONLINE &&
                 connection.status == ConnectionStatus.ONLINE
