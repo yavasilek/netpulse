@@ -1,0 +1,56 @@
+#Задача_integrate_workgraph_codex_pilot<[
+Базис:
+  NetPulse является нативным Git-проектом Codex со своими unit-тестами, lint-проверками и сборкой Android APK.
+  Для сопровождения проекта нужен единый локальный backlog с прозрачным состоянием задач и проверками, не влияющий на Android runtime.
+Вектор:
+  Установить точные devDependencies Work Graph и подключить MCP без привязки к абсолютному пути checkout.
+  Отключить Git snapshots, закрепить эксплуатационные команды в AGENTS.md и проверить Local/Worktree, UI, Android-сборку и Git diff.
+Цель:
+  Codex сопровождает задачи NetPulse через Work Graph, а интеграция одинаково работает в основном checkout и временных worktree.
+Проверки:
+  Work Graph doctor завершается без ошибок в основном и временном checkout.
+  MCP автоматически подключается и читает backlog текущего checkout.
+  Локальный UI NetPulse возвращает HTTP 200 по адресу localhost:4188.
+  Gradle unit-тесты, lintDebug и assembleDebug проходят без регрессий.
+  Команда git diff --check не выявляет дефектов форматирования.
+Анализ:
+  Work Graph добавлен как dev-only слой для сопровождения Android-проекта. Worktree-aware runner определяет корень текущего и основного checkout, а Node-зависимости не попадают в APK.
+Решение:
+  Применить проверенный пилот к NetPulse с портом 4188, точными версиями и отключёнными автоматическими Git-снимками.
+
+Метки:
+  work.closed_at: 2026-08-03T23:30:01.099Z
+  work.write.run_id: mcp-claim-integrate-workgraph-codex-pilot-1785799345663
+  atom.profile: work_item
+  migration.strategy: rebuild
+  trace.status: pending
+  work.analysis.at: 2026-08-03T23:22:25.622Z
+  work.analysis.source: create_work_item
+  work.decision.at: 2026-08-03T23:22:25.622Z
+  work.decision.verdict: useful
+  work.department: agent-platform
+  work.id: integrate-workgraph-codex-pilot
+  work.item_kind: task
+  work.next_action: Проверить совместную работу Work Graph и Android, затем зафиксировать интеграцию в репозитории
+  work.owner_role: codex
+  work.pipeline_stage: decided
+  work.priority: high
+  work.risk: medium
+  work.status: done
+  work.target_files: .codex/config.toml, .work-graph/, AGENTS.md, .gitignore, architecture/, intent/, work/, package.json, package-lock.json
+  work.title: Интегрировать Work Graph в NetPulse для задач Codex
+  work.updated_by: workgraph-mcp
+  work.write.at: 2026-08-03T23:30:01.099Z
+  work.write.operation: complete
+
+Свидетельства:
+  - Интеграция признана полезной; Work Graph подключается как изолированный dev-инструмент NetPulse.
+  - Локальный контур Work Graph проверен: doctor без ошибок и предупреждений, MCP предоставляет 47 инструментов, npm audit чистый, UI возвращает HTTP 200 на localhost:4188.
+  - {"type":"test","command":"npm run workgraph:doctor; MCP smoke; npm audit; UI HTTP smoke","exitCode":0,"status":"succeeded","taskId":"integrate-workgraph-codex-pilot","cmd":"npm run workgraph:doctor; MCP smoke; npm audit; UI HTTP smoke","summary":"npm run workgraph:doctor; MCP smoke; npm audit; UI HTTP smoke exitCode=0"}
+  - Полный Android-контур NetPulse прошёл; debug APK и lint-отчёт сформированы.
+  - {"type":"test","command":"gradlew.bat testDebugUnitTest lintDebug assembleDebug --stacktrace","exitCode":0,"status":"succeeded","taskId":"integrate-workgraph-codex-pilot","cmd":"gradlew.bat testDebugUnitTest lintDebug assembleDebug --stacktrace","summary":"gradlew.bat testDebugUnitTest lintDebug assembleDebug --stacktrace exitCode=0"}
+  - Проверен настоящий временный Git worktree: без собственного node_modules MCP запустился через зависимости основного checkout и отдал 47 инструментов; после npm ci doctor показал 0 ошибок и 0 предупреждений, UI на тестовом порту 4288 вернул HTTP 200.
+  - Полный Android-контур gradlew.bat testDebugUnitTest lintDebug assembleDebug завершился с exit code 0; debug APK и HTML-отчёт lint сформированы.
+  - npm audit сообщает 0 уязвимостей; git diff --cached --check прошёл на полном наборе файлов интеграции, после проверки staging очищен без изменения рабочего дерева.
+  - Work Graph 0.2.26/0.2.21 интегрирован в NetPulse для Local и Worktree; MCP, UI, doctor, npm audit и полный Android build/test/lint проверены.
+]>
