@@ -8,6 +8,7 @@
 WorkItems:
   - fix-workgraph-cyrillic-storage: intent/system/runtime/work/fix-workgraph-cyrillic-storage.work.bvc
   - integrate-workgraph-codex-pilot: intent/system/runtime/work/integrate-workgraph-codex-pilot.work.bvc
+  - netpulse-release-0-3-4: intent/system/runtime/work/netpulse-release-0-3-4.work.bvc
   - netpulse-speed-indicator-without-vpn: intent/system/runtime/work/netpulse-speed-indicator-without-vpn.work.bvc
 
 Метки:

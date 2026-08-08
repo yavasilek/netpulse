@@ -1,0 +1,50 @@
+#Задача_netpulse_release_0_3_4<[
+Базис:
+  Пользователь явно разрешил выпуск после готового коммита 7d7be60, исправляющего отображение скорости без VPN.
+Вектор:
+  Синхронизировать релизную ветку с актуальным main; обновить версию и changelog; проверить unit/lint/release build; открыть PR; дождаться CI; слить; создать тег v0.3.4; проверить опубликованный подписанный APK, SHA-256 и сертификат.
+Цель:
+  Публичный GitHub Release v0.3.4 с проверенным APK, содержащим исправление status-bar speed без VPN.
+Проверки:
+  gh auth status успешен
+  54 unit-теста, lintRelease и assembleRelease успешны
+  PR CI успешен
+  Release workflow успешен
+  APK versionName/versionCode, SHA-256 и подпись проверены
+Свидетельства:
+  Пользователь дал явную команду «Выпускай»; начат релиз 0.3.4.
+  - Локальная release-проверка успешна: 54 unit-теста без failures/errors/skips, lintRelease и assembleRelease прошли.
+  - {"type":"test","command":".\\gradlew.bat testDebugUnitTest lintRelease assembleRelease --no-daemon","exitCode":0,"status":"succeeded","taskId":"netpulse-release-0-3-4","cmd":".\\gradlew.bat testDebugUnitTest lintRelease assembleRelease --no-daemon","summary":".\\gradlew.bat testDebugUnitTest lintRelease assembleRelease --no-daemon exitCode=0"}
+  - git diff --check прошёл; версия по умолчанию обновлена до 0.3.4 (versionCode 11), changelog подготовлен.
+  - {"type":"command","command":"git diff --check","exitCode":0,"status":"succeeded","taskId":"netpulse-release-0-3-4","cmd":"git diff --check","summary":"git diff --check exitCode=0"}
+Анализ:
+  Исправление уже изолировано и проверено в локальном коммите 7d7be60. Релиз должен включить локальный Work Graph integration commit efa5fdc, потому что ветка исправления основана на нём, но Work Graph остаётся dev-only и не попадает в APK. Публикация безопасна после повторной release-проверки и зелёного GitHub CI.
+Решение:
+  Выпустить patch-версию 0.3.4 через PR и tag workflow; не переиспользовать старый APK и не обходить CI.
+
+Метки:
+  atom.profile: work_item
+  migration.strategy: rebuild
+  trace.status: pending
+  work.analysis.at: 2026-08-08T00:50:59.054Z
+  work.analysis.source: cursor-mcp
+  work.claim_lease_until: 2026-08-08T01:05:59.005Z
+  work.claimed_by: mcp-claim-netpulse-release-0-3-4-1786150259005
+  work.decision.at: 2026-08-08T00:50:59.105Z
+  work.decision.verdict: useful
+  work.department: android-release
+  work.id: netpulse-release-0-3-4
+  work.item_kind: task
+  work.next_action: promote в ready после depends_on, затем claim/execute
+  work.owner_role: agent
+  work.pipeline_stage: decided
+  work.priority: high
+  work.risk: medium
+  work.status: doing
+  work.target_files: app/build.gradle.kts, CHANGELOG.md, .github/workflows/release.yml
+  work.title: Выпустить NetPulse 0.3.4 с исправлением скорости без VPN
+  work.updated_by: workgraph-mcp
+  work.write.at: 2026-08-08T00:53:52.066Z
+  work.write.operation: evidence
+  work.write.run_id: mcp-claim-netpulse-release-0-3-4-1786150259005
+]>
