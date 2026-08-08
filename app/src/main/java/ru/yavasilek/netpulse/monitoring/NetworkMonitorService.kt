@@ -125,13 +125,13 @@ class NetworkMonitorService : Service() {
             )
         ) {
             VpnDisconnectAlertAction.SHOW -> {
-                notificationManager.notify(
-                    VPN_ALERT_NOTIFICATION_ID,
-                    notificationFactory.buildAlert(
-                        title = "VPN отключён",
-                        message = "Текущее соединение: ${snapshot.connection.transportLabel}",
-                    ),
-                )
+                postVpnDisconnectAlert(snapshot, settings)
+            }
+
+            VpnDisconnectAlertAction.UPDATE -> {
+                if (isNotificationActive(VPN_ALERT_NOTIFICATION_ID)) {
+                    postVpnDisconnectAlert(snapshot, settings)
+                }
             }
 
             VpnDisconnectAlertAction.CANCEL -> {
@@ -141,6 +141,21 @@ class NetworkMonitorService : Service() {
             VpnDisconnectAlertAction.NONE -> Unit
         }
     }
+
+    private fun postVpnDisconnectAlert(
+        snapshot: MonitorSnapshot,
+        settings: AppSettings,
+    ) {
+        notificationManager.notify(
+            VPN_ALERT_NOTIFICATION_ID,
+            notificationFactory.buildVpnDisconnectedAlert(snapshot, settings),
+        )
+    }
+
+    private fun isNotificationActive(notificationId: Int): Boolean =
+        runCatching {
+            notificationManager.activeNotifications.any { it.id == notificationId }
+        }.getOrDefault(false)
 
     private fun copyPublicIp() {
         val address = appContainer.monitorRepository.state.value.publicIp.primary?.address
