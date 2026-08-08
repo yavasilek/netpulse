@@ -17,19 +17,25 @@
   - {"type":"test","command":".\\gradlew.bat testDebugUnitTest lintRelease assembleRelease --no-daemon","exitCode":0,"status":"succeeded","taskId":"netpulse-release-0-3-4","cmd":".\\gradlew.bat testDebugUnitTest lintRelease assembleRelease --no-daemon","summary":".\\gradlew.bat testDebugUnitTest lintRelease assembleRelease --no-daemon exitCode=0"}
   - git diff --check прошёл; версия по умолчанию обновлена до 0.3.4 (versionCode 11), changelog подготовлен.
   - {"type":"command","command":"git diff --check","exitCode":0,"status":"succeeded","taskId":"netpulse-release-0-3-4","cmd":"git diff --check","summary":"git diff --check exitCode=0"}
+  - GitHub CI PR #18 завершился успешно: build job 93035659466, run 31231347101.
+  - {"type":"test","command":"GitHub Actions CI run 31231347101","exitCode":0,"status":"succeeded","taskId":"netpulse-release-0-3-4","cmd":"GitHub Actions CI run 31231347101","summary":"GitHub Actions CI run 31231347101 exitCode=0"}
+  - Release workflow 31231572885 завершился успешно; GitHub Release v0.3.4 опубликован с APK и .sha256.
+  - {"type":"test","command":"GitHub Actions Release APK run 31231572885","exitCode":0,"status":"succeeded","taskId":"netpulse-release-0-3-4","cmd":"GitHub Actions Release APK run 31231572885","summary":"GitHub Actions Release APK run 31231572885 exitCode=0"}
+  - Опубликованный NetPulse-0.3.4.apk проверен: package ru.yavasilek.netpulse, versionCode 11, versionName 0.3.4, SHA-256 fbaba70d96b74d887cbf9193548d83cead7fdc8e8def52de919c8c8015931914, подписи v2/v3 валидны, сертификат совпадает с v0.3.3.
+  - {"type":"command","command":"gh release download + Get-FileHash + apksigner verify + aapt dump badging","exitCode":0,"status":"succeeded","taskId":"netpulse-release-0-3-4","cmd":"gh release download + Get-FileHash + apksigner verify + aapt dump badging","summary":"gh release download + Get-FileHash + apksigner verify + aapt dump badging exitCode=0"}
+  - NetPulse 0.3.4 опубликован: PR #18 merged, CI и Release APK workflow успешны; APK versionCode 11/versionName 0.3.4, SHA-256 и сертификат подтверждены.
 Анализ:
   Исправление уже изолировано и проверено в локальном коммите 7d7be60. Релиз должен включить локальный Work Graph integration commit efa5fdc, потому что ветка исправления основана на нём, но Work Graph остаётся dev-only и не попадает в APK. Публикация безопасна после повторной release-проверки и зелёного GitHub CI.
 Решение:
   Выпустить patch-версию 0.3.4 через PR и tag workflow; не переиспользовать старый APK и не обходить CI.
 
 Метки:
+  work.closed_at: 2026-08-08T01:05:55.265Z
   atom.profile: work_item
   migration.strategy: rebuild
   trace.status: pending
   work.analysis.at: 2026-08-08T00:50:59.054Z
   work.analysis.source: cursor-mcp
-  work.claim_lease_until: 2026-08-08T01:05:59.005Z
-  work.claimed_by: mcp-claim-netpulse-release-0-3-4-1786150259005
   work.decision.at: 2026-08-08T00:50:59.105Z
   work.decision.verdict: useful
   work.department: android-release
@@ -40,11 +46,11 @@
   work.pipeline_stage: decided
   work.priority: high
   work.risk: medium
-  work.status: doing
+  work.status: done
   work.target_files: app/build.gradle.kts, CHANGELOG.md, .github/workflows/release.yml
   work.title: Выпустить NetPulse 0.3.4 с исправлением скорости без VPN
   work.updated_by: workgraph-mcp
-  work.write.at: 2026-08-08T00:53:52.066Z
-  work.write.operation: evidence
+  work.write.at: 2026-08-08T01:05:55.268Z
+  work.write.operation: complete
   work.write.run_id: mcp-claim-netpulse-release-0-3-4-1786150259005
 ]>
