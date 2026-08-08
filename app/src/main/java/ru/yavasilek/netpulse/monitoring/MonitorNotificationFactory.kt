@@ -159,12 +159,33 @@ class MonitorNotificationFactory(
     }
 
     fun buildAlert(title: String, message: String): Notification =
+        buildAlert(
+            title = title,
+            message = message,
+            smallIcon = Icon.createWithResource(context, R.drawable.ic_notification),
+        )
+
+    fun buildVpnDisconnectedAlert(
+        snapshot: MonitorSnapshot,
+        settings: AppSettings,
+    ): Notification = buildAlert(
+        title = "VPN отключён",
+        message = "Текущее соединение: ${snapshot.connection.transportLabel}",
+        smallIcon = iconRenderer.render(snapshot.speed, settings),
+    )
+
+    private fun buildAlert(
+        title: String,
+        message: String,
+        smallIcon: Icon,
+    ): Notification =
         Notification.Builder(context, ALERTS_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_notification)
+            .setSmallIcon(smallIcon)
             .setContentTitle(title)
             .setContentText(message)
             .setStyle(Notification.BigTextStyle().bigText(message))
             .setContentIntent(activityPendingIntent())
+            .setOnlyAlertOnce(true)
             .setAutoCancel(true)
             .setCategory(Notification.CATEGORY_ERROR)
             .setColor(ContextCompat.getColor(context, R.color.launcher_background))

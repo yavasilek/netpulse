@@ -3,6 +3,7 @@ package ru.yavasilek.netpulse.monitoring
 internal enum class VpnDisconnectAlertAction {
     NONE,
     SHOW,
+    UPDATE,
     CANCEL,
 }
 
@@ -27,6 +28,11 @@ internal class VpnDisconnectAlertTracker {
             }
         }
 
+        if (previous == null) {
+            alertVisible = false
+            return VpnDisconnectAlertAction.CANCEL
+        }
+
         if (!warningEnabled) {
             val shouldCancel = alertVisible
             alertVisible = false
@@ -40,6 +46,10 @@ internal class VpnDisconnectAlertTracker {
         if (previous == true) {
             alertVisible = true
             return VpnDisconnectAlertAction.SHOW
+        }
+
+        if (alertVisible) {
+            return VpnDisconnectAlertAction.UPDATE
         }
 
         return VpnDisconnectAlertAction.NONE

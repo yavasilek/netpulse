@@ -1,0 +1,50 @@
+#Задача_netpulse_speed_indicator_without_vpn<[
+Базис:
+  На Pixel после отключения VPN исчезает числовой индикатор скорости в статус-баре, хотя мониторинг без VPN должен продолжаться. Референс: C:/Users/yavasilek/Downloads/Screenshot_20260807-221425.png
+Вектор:
+  Воспроизвести переход VPN → обычная активная сеть; найти причину пропажи динамической иконки; не привязывать мониторинг скорости к VPN; добавить регрессионный тест.
+Цель:
+  Числовая скорость остаётся видимой в статус-баре при активном интернете независимо от наличия VPN.
+Проверки:
+  Релевантные unit-тесты проходят
+  Полный testDebugUnitTest lintDebug assembleDebug проходит
+  git diff --check проходит
+Свидетельства:
+  Задача принята по скриншоту Pixel; начата диагностика перехода VPN → обычная сеть.
+  - Регрессионный VpnDisconnectAlertTrackerTest проходит: VPN ON → OFF создаёт SHOW, последующие снимки без VPN дают UPDATE для динамической speed icon, reconnect даёт CANCEL; initial disconnected snapshot очищает stale alert.
+  - {"type":"test","command":".\\gradlew.bat testDebugUnitTest --tests ru.yavasilek.netpulse.monitoring.VpnDisconnectAlertTrackerTest","exitCode":0,"status":"succeeded","taskId":"netpulse-speed-indicator-without-vpn","cmd":".\\gradlew.bat testDebugUnitTest --tests ru.yavasilek.netpulse.monitoring.VpnDisconnectAlertTrackerTest","summary":".\\gradlew.bat testDebugUnitTest --tests ru.yavasilek.netpulse.monitoring.VpnDisconnectAlertTrackerTest exitCode=0"}
+  - Полная Android-проверка прошла: 54 unit-теста, failures/errors/skipped = 0; lintDebug и assembleDebug успешны; debug APK создан.
+  - {"type":"test","command":".\\gradlew.bat testDebugUnitTest lintDebug assembleDebug","exitCode":0,"status":"succeeded","taskId":"netpulse-speed-indicator-without-vpn","cmd":".\\gradlew.bat testDebugUnitTest lintDebug assembleDebug","summary":".\\gradlew.bat testDebugUnitTest lintDebug assembleDebug exitCode=0"}
+  - git diff --check завершился без ошибок.
+  - {"type":"command","command":"git diff --check","exitCode":0,"status":"succeeded","taskId":"netpulse-speed-indicator-without-vpn","cmd":"git diff --check","summary":"git diff --check exitCode=0"}
+  - Исправление готово: активное предупреждение VPN получает и обновляет числовую speed icon, stale alert очищается при старте, ручное закрытие не отменяется повторной публикацией. 54/54 unit-теста, lintDebug, assembleDebug и git diff --check прошли.
+Анализ:
+  Код sampling не зависит от VPN: MonitorRepository продолжает вызывать TrafficSampler при любом ConnectionInfo. На Pixel отдельное длительное уведомление «VPN отключён» использует статическую иконку NetPulse и при автоматической группировке приложения подменяет в статус-баре динамическую числовую иконку foreground-уведомления. Исправление должно сохранять предупреждение в шторке, но обновлять его smallIcon текущей скоростью; после dismiss не публиковать заново. Риск ограничен notification lifecycle.
+Решение:
+  Обновлять активное VPN-alert текущей числовой иконкой скорости и очищать устаревший alert при первом снимке. Это сохраняет предупреждение и постоянный индикатор без изменения расчёта трафика.
+
+Метки:
+  work.closed_at: 2026-08-08T00:45:57.332Z
+  atom.profile: work_item
+  migration.strategy: rebuild
+  trace.status: pending
+  work.analysis.at: 2026-08-08T00:42:28.175Z
+  work.analysis.source: cursor-mcp
+  work.decision.at: 2026-08-08T00:42:28.234Z
+  work.decision.verdict: useful
+  work.department: android-monitoring
+  work.id: netpulse-speed-indicator-without-vpn
+  work.item_kind: task
+  work.next_action: promote в ready после depends_on, затем claim/execute
+  work.owner_role: agent
+  work.pipeline_stage: decided
+  work.priority: high
+  work.risk: medium
+  work.status: done
+  work.target_files: app/src/main/java/ru/yavasilek/netpulse/network/TrafficSampler.kt, app/src/main/java/ru/yavasilek/netpulse/monitoring/StatusIconRenderer.kt, app/src/main/java/ru/yavasilek/netpulse/monitoring/NetworkMonitorService.kt, app/src/test
+  work.title: Показывать скорость в статус-баре без активного VPN
+  work.updated_by: workgraph-mcp
+  work.write.at: 2026-08-08T00:45:57.333Z
+  work.write.operation: complete
+  work.write.run_id: mcp-claim-netpulse-speed-indicator-without-vpn-1786149613944
+]>

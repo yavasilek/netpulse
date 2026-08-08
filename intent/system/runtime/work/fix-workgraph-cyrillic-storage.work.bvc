@@ -1,0 +1,49 @@
+#Задача_fix_workgraph_cyrillic_storage<[
+Базис:
+  Русский текст пилотной карточки был передан в Node.js через конвейер Windows PowerShell и сохранился как знаки вопроса.
+  Проблема находится в данных карточки, а не в шрифте или браузерном интерфейсе Work Graph.
+Вектор:
+  Восстановить читаемые поля карточки в UTF-8, не меняя её идентификатор, статус и структурированные результаты проверок.
+  Для дальнейших MCP-записей с кириллицей запускать сохранённый UTF-8 JavaScript-файл, а не передавать исходник через PowerShell pipeline.
+Цель:
+  Карточка интеграции NetPulse полностью читается по-русски в файле и интерфейсе Work Graph.
+Проверки:
+  В исходном файле карточки отсутствуют последовательности вопросительных знаков.
+  Work Graph doctor завершается без ошибок и предупреждений.
+  Страница UI на localhost:4188 возвращает HTTP 200 и показывает кириллицу.
+Анализ:
+  Исправление безопасно: повреждены только текстовые поля одной ещё не закоммиченной карточки. Статус и машинные записи проверок сохраняются.
+Решение:
+  Восстановить текст вручную через точечный patch, поскольку текущий MCP не предоставляет операцию редактирования основных полей существующей карточки.
+
+Метки:
+  work.closed_at: 2026-08-03T23:35:35.117Z
+  work.write.run_id: mcp-claim-fix-workgraph-cyrillic-storage-1785800060757
+  atom.profile: work_item
+  migration.strategy: rebuild
+  trace.status: pending
+  work.analysis.at: 2026-08-03T23:34:20.723Z
+  work.analysis.source: create_work_item
+  work.decision.at: 2026-08-03T23:34:20.723Z
+  work.decision.verdict: useful
+  work.department: agent-platform
+  work.id: fix-workgraph-cyrillic-storage
+  work.next_action: Восстановить текст карточки и проверить UI на localhost:4188.
+  work.owner_role: codex
+  work.pipeline_stage: decided
+  work.priority: high
+  work.risk: low
+  work.status: done
+  work.target_files: intent/system/runtime/work/integrate-workgraph-codex-pilot.work.bvc
+  work.title: Исправить отображение кириллицы в карточке Work Graph
+  work.updated_by: workgraph-mcp
+  work.write.at: 2026-08-03T23:35:35.117Z
+  work.write.operation: complete
+
+Свидетельства:
+  - Проблема подтверждена чтением UTF-8 файла: кириллица физически заменена знаками вопроса.
+  - Текст пилотной карточки восстановлен в UTF-8; последовательностей из трёх и более вопросительных знаков в файлах карточек нет.
+  - npm run workgraph:doctor; UI HTTP and UTF-8 content smoke exitCode=0
+  - {"type":"test","command":"npm run workgraph:doctor; UI HTTP and UTF-8 content smoke","exitCode":0,"status":"succeeded","taskId":"fix-workgraph-cyrillic-storage","cmd":"npm run workgraph:doctor; UI HTTP and UTF-8 content smoke","summary":"npm run workgraph:doctor; UI HTTP and UTF-8 content smoke exitCode=0"}
+  - Кириллица восстановлена и подтверждена в исходном файле, MCP-данных и локальном UI Work Graph.
+]>

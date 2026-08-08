@@ -1,0 +1,8 @@
+{
+  "schema": "workgraph.project.config.v2",
+  "projectRoot": "C:\\Users\\yavasilek\\Documents\\nav",
+  "projectId": "nav",
+  "label": "NetPulse",
+  "uiPort": 4188,
+  "createdAt": "2026-08-03T23:20:40.704Z"
+}
